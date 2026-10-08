@@ -135,6 +135,11 @@ public sealed class Spectrogram
         lock (gate) MarkDirty(0, Columns - 1);
     }
 
+    public byte[] CopyPixels()
+    {
+        lock (gate) return (byte[])pixels.Clone();
+    }
+
     private void ColourColumn(int x)
     {
         double range = upperDb - lowerDb;
