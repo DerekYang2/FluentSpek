@@ -18,9 +18,12 @@ Based on [Spek](https://github.com/alexkay/spek) and [spek-X](https://github.com
 You need the .NET 10 SDK and ffmpeg.
 
 ```powershell
-dotnet build
+.\scripts\Get-Ffmpeg.ps1            # ffmpeg 9.0 for x64 into .\ffmpeg; add -Architecture x64, arm64 for both
+dotnet build src\FluentSpek          # add -p:Platform=arm64 for ARM64
 dotnet test
 ```
+
+`Get-Ffmpeg.ps1` downloads BtbN's LGPL build of FFmpeg 9.0 into `ffmpeg\win-x64` or `ffmpeg\win-arm64`, which git ignores. The app build copies it to `ffmpeg\ffmpeg.exe` next to `FluentSpek.exe`.
 
 FluentSpek looks for ffmpeg in this order:
 
@@ -29,6 +32,34 @@ FluentSpek looks for ffmpeg in this order:
 3. `ffmpeg.exe` on `PATH`.
 
 The tests that run ffmpeg use `FLUENTSPEK_FFMPEG`, then `PATH`, and report inconclusive if neither has it.
+
+## Using FluentSpek
+
+Open a file with the Open button, Ctrl+O, by dropping it on the window, or from the command line. The toolbar changes the palette, window function, FFT size, channel and stream, and Ctrl+S saves the view as a PNG.
+
+With the spectrogram focused, Spek's keys work too. Each key steps forward, and with Shift it steps back:
+
+| Key | Changes |
+| --- | --- |
+| `c` | Channel |
+| `f` | Window function: Hann, Hamming, Blackman-Harris |
+| `l` | Lower limit of the dB range |
+| `p` | Palette: Spectrum, SoX, Mono |
+| `s` | Audio stream |
+| `u` | Upper limit of the dB range |
+| `w` | FFT size, from 256 to 16384 samples |
+
+Settings (Ctrl+E) has the dB limits, the full path and detailed description options, the ffmpeg path, and a minimum fill-in time. Short files are analysed in a fraction of a second, so by default the spectrogram still fills in from left to right over at least 0.75 seconds. Set it to 0 to show each column as soon as it's ready.
+
+Settings are saved in `%LOCALAPPDATA%\FluentSpek\settings.json`.
+
+### Command line
+
+```
+FluentSpek [FILE] [PNG] [WIDTH] [HEIGHT]
+```
+
+With a PNG path, FluentSpek saves the spectrogram at WIDTH × HEIGHT pixels (1000 × 600 by default) and exits without opening a window. It returns 0 on success and 1 if the file or ffmpeg can't be read. In spek-X, WIDTH and HEIGHT set the window size, so the PNG comes out smaller than the numbers you pass.
 
 ## Differences from Spek
 

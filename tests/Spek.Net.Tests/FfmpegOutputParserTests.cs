@@ -55,6 +55,20 @@ public sealed class FfmpegOutputParserTests
     }
 
     [TestMethod]
+    public void Mp3FromFfmpeg9WithStartAndCoverArt()
+    {
+        var info = Parse("""
+            Input #0, mp3, from 'ladan.mp3':
+              Duration: 00:03:53.32, start: 0.023021, bitrate: 239 kb/s
+              Stream #0:0: Audio: mp3 (mp3float), 48000 Hz, stereo, fltp, 181 kb/s, start 0.023021
+              Stream #0:1: Video: png, rgb24(pc, gbr/unknown/unknown), 1408x768, 90k tbr, 90k tbn, start 0.023022 (attached pic)
+            """);
+
+        AssertStream(info.Streams.Single(), "mp3", "MP3 (MPEG audio layer 3)", 48000, 2, 0, 181);
+        Assert.AreEqual(233.32, info.Duration, 1e-9);
+    }
+
+    [TestMethod]
     public void AacInM4a()
     {
         var info = Parse("""

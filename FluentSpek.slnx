@@ -1,5 +1,9 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/FluentSpek/FluentSpek.csproj">
+      <Platform Project="x64" />
+    </Project>
+    <Project Path="src/Spek.Net.WinUI/Spek.Net.WinUI.csproj" />
     <Project Path="src/Spek.Net/Spek.Net.csproj" />
   </Folder>
   <Folder Name="/tests/">
