@@ -29,6 +29,8 @@ jobs:
         env:
           FLUENTSPEK_FFMPEG: ${{ github.workspace }}\ffmpeg\win-x64\ffmpeg.exe
         run: dotnet test tests/Spek.Net.Tests/Spek.Net.Tests.csproj -c Release
+      - name: Pack Spek.NET and Spek.NET.WinUI
+        run: dotnet pack FluentSpek.slnx -c Release -o artifacts
 
   build:
     name: App build (${{ matrix.platform }})

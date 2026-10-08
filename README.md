@@ -61,6 +61,17 @@ FluentSpek [FILE] [PNG] [WIDTH] [HEIGHT]
 
 With a PNG path, FluentSpek saves the spectrogram at WIDTH × HEIGHT pixels (1000 × 600 by default) and exits without opening a window. It returns 0 on success and 1 if the file or ffmpeg can't be read. In spek-X, WIDTH and HEIGHT set the window size, so the PNG comes out smaller than the numbers you pass.
 
+## Releasing
+
+`.github/workflows/release.yml` publishes a version when its tag is pushed:
+
+1. Set `<Version>` in `Directory.Build.props`, commit, and push.
+2. Tag the commit with the same version and push the tag: `git tag v0.1.0` and `git push origin v0.1.0`.
+
+The workflow runs the tests, checks that the tag matches the version, and pushes Spek.NET and Spek.NET.WinUI to nuget.org with their symbol packages. It also builds `FluentSpek-v0.1.0-win-x64.zip` and `FluentSpek-v0.1.0-win-arm64.zip`, each with the matching ffmpeg, and attaches them to a GitHub release. A tag with a hyphen, such as `v0.2.0-beta.1`, makes a prerelease. Running the workflow by hand from the Actions tab builds everything without publishing.
+
+nuget.org uses Trusted Publishing, so the repository stores no API key. It needs a policy on nuget.org (your name > Trusted Publishing, with owner `DerekYang2`, repository `FluentSpek` and workflow `release.yml`) and a repository secret `NUGET_USER` that holds the nuget.org profile name.
+
 ## Differences from Spek
 
 - Every decoded frame belongs to exactly one column. Spek's worker counts some frames twice where its reader hands over a new block, so its columns run ahead of the audio. In spek-X 0.9.4, a tone that starts halfway through a 2-minute or 10-minute file appears 4 columns right of the middle of an 832-column plot.

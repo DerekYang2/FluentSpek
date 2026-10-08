@@ -38,6 +38,13 @@ foreach ($arch in $Architecture) {
         Remove-Item $zip
     }
 
-    $version = (& (Join-Path $folder 'ffmpeg.exe') -hide_banner -version | Select-Object -First 1)
-    Write-Host "$folder\ffmpeg.exe: $version"
+    $native = if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { 'arm64' } else { 'x64' }
+    if ($arch -eq $native -or ($arch -eq 'x64' -and $native -eq 'arm64')) {
+        $version = (& (Join-Path $folder 'ffmpeg.exe') -hide_banner -version | Select-Object -First 1)
+        Write-Host "$folder\ffmpeg.exe: $version"
+    }
+    else {
+        # An x64 machine can't run ARM64 programs, so this one can't be checked here.
+        Write-Host "$folder\ffmpeg.exe: downloaded"
+    }
 }

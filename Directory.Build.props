@@ -1,11 +1,19 @@
 <Project>
   <PropertyGroup>
+    <!-- One version for the packages and the app. A release tag must match it: v0.1.0 for 0.1.0. -->
+    <Version>0.1.0</Version>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <Authors>Derek Yang</Authors>
     <Copyright>Copyright (C) 2026 Derek Yang. Based on Spek and spek-X.</Copyright>
     <PackageLicenseExpression>GPL-3.0-only</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/DerekYang2/FluentSpek</PackageProjectUrl>
     <RepositoryUrl>https://github.com/DerekYang2/FluentSpek</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
   </PropertyGroup>
 </Project>

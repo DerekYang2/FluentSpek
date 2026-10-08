@@ -4,7 +4,9 @@
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <RootNamespace>Spek.Net.WinUI</RootNamespace>
     <PackageId>Spek.NET.WinUI</PackageId>
-    <Description>A WinUI 3 control that draws Spek's spectrogram with Win2D as the audio decodes.</Description>
+    <Description>A WinUI 3 control that draws Spek's spectrogram of an audio file with Win2D as it decodes, and saves it as a PNG.</Description>
+    <PackageTags>spek;spectrogram;audio;ffmpeg;winui;win2d</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <UseWinUI>true</UseWinUI>
     <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
     <!-- The app that uses this library picks the platform, and Win2D's native DLL comes with it from there. -->
@@ -16,5 +18,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Spek.Net\Spek.Net.csproj" />
+    <None Include="README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 </Project>

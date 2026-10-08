@@ -14,7 +14,7 @@
     <WindowsPackageType>None</WindowsPackageType>
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
     <SelfContained>true</SelfContained>
-    <Version>0.1.0</Version>
+    <IsPackable>false</IsPackable>
     <Product>FluentSpek</Product>
   </PropertyGroup>
   <ItemGroup>

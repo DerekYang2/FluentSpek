@@ -3,10 +3,12 @@
     <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>Spek.Net</RootNamespace>
     <PackageId>Spek.NET</PackageId>
-    <Description>Spek's acoustic spectrum analysis for .NET: decodes audio with ffmpeg and produces spectrogram columns.</Description>
-    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <Description>Spek's spectrogram analysis for .NET. Decodes audio with ffmpeg and turns it into columns of dB values, one per pixel, with Spek's palettes, window functions and rulers.</Description>
+    <PackageTags>spek;spectrogram;spectrum;audio;fft;ffmpeg</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Spek.Net.Tests" />
+    <None Include="README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 </Project>
