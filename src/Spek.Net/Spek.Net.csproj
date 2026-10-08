@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Spek.Net</RootNamespace>
+    <PackageId>Spek.NET</PackageId>
+    <Description>Spek's acoustic spectrum analysis for .NET: decodes audio with ffmpeg and produces spectrogram columns.</Description>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Spek.Net.Tests" />
+  </ItemGroup>
+</Project>

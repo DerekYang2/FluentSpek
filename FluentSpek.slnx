@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Spek.Net/Spek.Net.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Spek.Net.Tests/Spek.Net.Tests.csproj" />
+  </Folder>
+</Solution>

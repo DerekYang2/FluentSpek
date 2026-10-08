@@ -1,0 +1,11 @@
+<Project>
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Authors>Derek Yang</Authors>
+    <Copyright>Copyright (C) 2026 Derek Yang. Based on Spek and spek-X.</Copyright>
+    <PackageLicenseExpression>GPL-3.0-only</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/DerekYang2/FluentSpek</RepositoryUrl>
+  </PropertyGroup>
+</Project>
