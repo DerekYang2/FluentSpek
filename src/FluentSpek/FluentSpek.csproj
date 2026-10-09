@@ -36,6 +36,7 @@
   </PropertyGroup>
   <ItemGroup Condition="Exists('$(FfmpegFolder)ffmpeg.exe')">
     <None Include="$(FfmpegFolder)ffmpeg.exe" Link="ffmpeg\ffmpeg.exe" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="$(FfmpegFolder)LICENSE.txt" Link="ffmpeg\LICENSE.txt" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="$(FfmpegFolder)BUILD.txt" Link="ffmpeg\BUILD.txt" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="$(FfmpegFolder)licenses\*.txt" Link="ffmpeg\licenses\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

@@ -18,12 +18,12 @@ Based on [Spek](https://github.com/alexkay/spek) and [spek-X](https://github.com
 You need the .NET 10 SDK and ffmpeg.
 
 ```powershell
-.\scripts\Get-Ffmpeg.ps1            # ffmpeg 9.0 for x64 into .\ffmpeg; add -Architecture x64, arm64 for both
+.\scripts\Get-Ffmpeg.ps1            # ffmpeg for x64 into .\ffmpeg; add -Architecture x64, arm64 for both
 dotnet build src\FluentSpek          # add -p:Platform=arm64 for ARM64
 dotnet test
 ```
 
-`Get-Ffmpeg.ps1` downloads BtbN's LGPL build of FFmpeg 9.0 into `ffmpeg\win-x64` or `ffmpeg\win-arm64`, which git ignores. The app build copies it to `ffmpeg\ffmpeg.exe` next to `FluentSpek.exe`.
+`Get-Ffmpeg.ps1` downloads an audio-only LGPL build of FFmpeg from [ffmpeg-audio](https://github.com/DerekYang2/ffmpeg-audio), about 8 MB instead of 130 MB for a full build, into `ffmpeg\win-x64` or `ffmpeg\win-arm64`, which git ignores. It checks each zip's SHA-256 against the hashes in the script. The app build copies `ffmpeg.exe`, its licenses and `BUILD.txt` to `ffmpeg\` next to `FluentSpek.exe`. To move to a newer ffmpeg-audio release, change the release tag and the two hashes in the script.
 
 FluentSpek looks for ffmpeg in this order:
 
