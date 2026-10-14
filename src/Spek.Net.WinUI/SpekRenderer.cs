@@ -1,5 +1,6 @@
 using System.Numerics;
 using Microsoft.Graphics.Canvas;
+using Microsoft.Graphics.Canvas.Geometry;
 using Microsoft.Graphics.Canvas.Text;
 using Microsoft.UI;
 using Windows.Foundation;
@@ -17,7 +18,10 @@ internal sealed record SpekScene(
     int LowerDb,
     int UpperDb,
     string? BrandName,
-    string? BrandVersion);
+    string? BrandVersion,
+    FrequencyRange? FrequencyRange = null,
+    ReferenceLines ReferenceLines = ReferenceLines.None,
+    SpectralDrop? Cutoff = null);
 
 // Draws Spek's layout: the title and description above the plot, the time ruler below it, the frequency ruler on the
 // left, and the palette with its dB ruler on the right. Sizes are in device-independent pixels.
@@ -75,16 +79,21 @@ internal static class SpekRenderer
 
         var plot = PlotRect(size);
         float plotW = (float)plot.Width, plotH = (float)plot.Height;
+        var range = scene.FrequencyRange ?? new FrequencyRange(0, Math.Max(1, scene.SampleRate / 2.0));
         if (plotW > 0 && plotH > 0)
         {
             if (spectrogram is not null && visibleColumns > 0)
             {
                 var bounds = spectrogram.SizeInPixels;
                 int columns = (int)Math.Min(visibleColumns, bounds.Width);
-                var source = new Rect(0, 0, columns, bounds.Height);
+                double nyquist = Math.Max(1, scene.SampleRate / 2.0);
+                var source = new Rect(0, (nyquist - range.Maximum) / nyquist * bounds.Height,
+                    columns, range.Span / nyquist * bounds.Height);
                 var destination = new Rect(LeftPad, TopPad, plotW * columns / bounds.Width, plotH);
                 ds.DrawImage(spectrogram, destination, source, 1, interpolation);
             }
+
+            if (scene.SampleRate > 0) DrawGuides(ds, plot, range, scene.ReferenceLines, scene.Cutoff);
 
             if (!string.IsNullOrEmpty(scene.Title))
             {
@@ -104,8 +113,8 @@ internal static class SpekRenderer
 
             if (scene.SampleRate > 0)
             {
-                int nyquist = scene.SampleRate / 2;
-                var ticks = Ruler.Ticks(0, nyquist, Ruler.FrequencySteps, 3.0, plotH / nyquist, 0, smallHeight, vertical: true);
+                int[] steps = [10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000];
+                var ticks = Ruler.Ticks((int)range.Minimum, (int)range.Maximum, steps, 3.0, plotH / range.Span, 0, smallHeight, vertical: true);
                 DrawRuler(ds, ticks, LeftPad, TopPad, RulerSide.Left, Ruler.FormatFrequency);
             }
         }
@@ -124,6 +133,50 @@ internal static class SpekRenderer
             DrawRuler(ds, ticks, w - RightPad + Gap + PaletteWidth, TopPad, RulerSide.Right, Ruler.FormatDensity);
         }
         ds.Antialiasing = CanvasAntialiasing.Antialiased;
+    }
+
+    private static void DrawGuides(CanvasDrawingSession ds, Rect plot, FrequencyRange range, ReferenceLines mode, SpectralDrop? cutoff)
+    {
+        using var clip = ds.CreateLayer(1, plot);
+        using var dots = new CanvasStrokeStyle { DashStyle = CanvasDashStyle.Dot };
+        if (mode == ReferenceLines.Mp3Lame)
+        {
+            var labels = new List<(float Y, string Text)>();
+            foreach (var reference in EncoderReferences.Mp3Lame.Reverse())
+            {
+                if (reference.FrequencyHz < range.Minimum || reference.FrequencyHz > range.Maximum) continue;
+                float y = (float)(plot.Top + range.FractionFromTop(reference.FrequencyHz) * plot.Height);
+                ds.DrawLine((float)plot.Left, y, (float)plot.Right, y, Colors.Black, 3);
+                ds.DrawLine((float)plot.Left, y, (float)plot.Right, y, Foreground, 1, dots);
+
+                labels.Add((y, $"LAME {reference.BitRateKbps} ~{reference.FrequencyHz / 1000.0:0.0} kHz"));
+            }
+            float nextLabelY = (float)plot.Top + 2;
+            for (int i = 0; i < labels.Count; i++)
+            {
+                var (y, label) = labels[i];
+                float lastStart = (float)plot.Bottom - (labels.Count - i) * 16;
+                float labelY = Math.Max(nextLabelY, Math.Min(y - 14, lastStart));
+                if (labelY + 14 > plot.Bottom) break;
+                float width = TextWidth(ds, label, SmallFont) + 8;
+                float x = (float)plot.Right - width - 4;
+                ds.FillRectangle(x, labelY, width, 14, Color.FromArgb(220, 0, 0, 0));
+                ds.DrawText(label, x + 4, labelY, Foreground, SmallFont);
+                nextLabelY = labelY + 16;
+            }
+        }
+
+        if (cutoff is not null && cutoff.FrequencyHz >= range.Minimum && cutoff.FrequencyHz <= range.Maximum)
+        {
+            float y = (float)(plot.Top + range.FractionFromTop(cutoff.FrequencyHz) * plot.Height);
+            ds.DrawLine((float)plot.Left, y, (float)plot.Right, y, Colors.Black, 4);
+            ds.DrawLine((float)plot.Left, y, (float)plot.Right, y, Foreground, 2);
+            string label = $"Measured drop ~{cutoff.FrequencyHz / 1000:0.00} kHz";
+            float width = TextWidth(ds, label, SmallFont) + 8;
+            float labelY = Math.Clamp(y + 2, (float)plot.Top, (float)Math.Max(plot.Top, plot.Bottom - 16));
+            ds.FillRectangle((float)plot.Left + 4, labelY, width, 16, Color.FromArgb(220, 0, 0, 0));
+            ds.DrawText(label, (float)plot.Left + 8, labelY, Foreground, SmallFont);
+        }
     }
 
     // A one-pixel-wide image of the palette, from the top of the range at row 0 down to the bottom.

@@ -41,6 +41,14 @@ public sealed partial class MainWindow : Window
         Spek.UpperDb = settings.UpperDb;
         Spek.ShowFullPath = settings.ShowFullPath;
         Spek.ShowDetailedDescription = settings.ShowDetailedDescription;
+        Spek.ReferenceLines = settings.ReferenceLines;
+        Spek.ShowSpectrum = settings.ShowSpectrum;
+        Spek.ShowCutoffMarker = settings.ShowCutoffMarker;
+        ReferenceLinesBox.SelectedIndex = (int)settings.ReferenceLines;
+        SpectrumToggle.IsChecked = settings.ShowSpectrum;
+        CutoffToggle.IsChecked = settings.ShowCutoffMarker;
+        Spek.InspectionChanged += (_, _) => UpdateInspection();
+        UpdateInspection();
 
         foreach (var property in new[]
         {
@@ -55,6 +63,7 @@ public sealed partial class MainWindow : Window
         Closed += (_, _) => SaveSettings();
         if (filePath is not null) OpenFile(Path.GetFullPath(filePath));
         Root.Loaded += (_, _) => Spek.Focus(FocusState.Programmatic);
+        Root.SizeChanged += (_, _) => Profile.Height = Root.ActualHeight < 720 ? 140 : 180;
     }
 
     private void OpenFile(string path)
@@ -196,6 +205,53 @@ public sealed partial class MainWindow : Window
         SaveButton.IsEnabled = !string.IsNullOrEmpty(Spek.FilePath);
     }
 
+    private void ReferenceLines_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        if (Spek is null || ReferenceLinesBox.SelectedIndex < 0) return;
+        Spek.ReferenceLines = (ReferenceLines)ReferenceLinesBox.SelectedIndex;
+        UpdateInspection();
+    }
+
+    private void InspectionOption_Changed(object sender, RoutedEventArgs e)
+    {
+        if (Spek is null) return;
+        Spek.ShowSpectrum = SpectrumToggle.IsChecked == true;
+        Spek.ShowCutoffMarker = CutoffToggle.IsChecked == true;
+        UpdateInspection();
+    }
+
+    private void ResetZoom_Click(object sender, RoutedEventArgs e)
+    {
+        Spek.ResetFrequencyZoom();
+        Spek.Focus(FocusState.Programmatic);
+    }
+
+    private void UpdateInspection()
+    {
+        Profile.Visibility = Spek.ShowSpectrum ? Visibility.Visible : Visibility.Collapsed;
+        Profile.Profile = Spek.SpectrumProfile;
+        Profile.FrequencyRange = Spek.VisibleFrequencyRange;
+        Profile.MeasuredDrop = Spek.ShowCutoffMarker ? Spek.MeasuredDrop : null;
+        var parts = new List<string>();
+        var frequency = Spek.VisibleFrequencyRange;
+        if (Spek.MinimumFrequency > 0 || Spek.MaximumFrequency > 0)
+            parts.Add($"Frequency view {frequency.Minimum / 1000:0.00} to {frequency.Maximum / 1000:0.00} kHz.");
+        if (Spek.HasSelection)
+            parts.Add($"Passage {Spek.SelectionStartSeconds:0.00} to {Spek.SelectionEndSeconds:0.00} s.");
+        else if (Spek.ShowSpectrum || Spek.ShowCutoffMarker)
+            parts.Add("Whole file selected. Drag across the plot to inspect a passage.");
+        if (Spek.ReferenceLines == ReferenceLines.Mp3Lame)
+            parts.Add("Guides are nominal LAME stereo CBR low-pass targets, not universal MP3 boundaries.");
+        if (Spek.ShowCutoffMarker)
+        {
+            if (Spek.SpectrumProfile is null) parts.Add("Cutoff measurement waits for analysis.");
+            else if (Spek.MeasuredDrop is { } drop) parts.Add($"Measured spectral drop near {drop.FrequencyHz / 1000:0.00} kHz, about {drop.DropDb:0} dB.");
+            else parts.Add("No qualifying sustained spectral drop found.");
+            parts.Add("A cutoff does not prove lossy encoding; no marker does not prove lossless origin.");
+        }
+        InspectionStatus.Text = string.Join(" ", parts);
+    }
+
     private void RestorePlacement()
     {
         if (settings.WindowWidth is int width && settings.WindowHeight is int height && settings.WindowX is int x && settings.WindowY is int y)
@@ -225,6 +281,9 @@ public sealed partial class MainWindow : Window
         settings.UpperDb = Spek.UpperDb;
         settings.ShowFullPath = Spek.ShowFullPath;
         settings.ShowDetailedDescription = Spek.ShowDetailedDescription;
+        settings.ReferenceLines = Spek.ReferenceLines;
+        settings.ShowSpectrum = Spek.ShowSpectrum;
+        settings.ShowCutoffMarker = Spek.ShowCutoffMarker;
 
         if (AppWindow.Presenter is OverlappedPresenter presenter)
         {

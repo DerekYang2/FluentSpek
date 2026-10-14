@@ -12,7 +12,10 @@ public sealed record ExportOptions(
     bool ShowDetailedDescription = false,
     string? BrandName = null,
     string? BrandVersion = null,
-    CanvasImageInterpolation Interpolation = CanvasImageInterpolation.HighQualityCubic);
+    CanvasImageInterpolation Interpolation = CanvasImageInterpolation.HighQualityCubic,
+    ReferenceLines ReferenceLines = ReferenceLines.None,
+    bool ShowCutoffMarker = false,
+    FrequencyRange? FrequencyRange = null);
 
 // Analyses a file and saves the whole view as a PNG without showing a window, like "spek FILE PNG WIDTH HEIGHT".
 public static class SpekExporter
@@ -40,6 +43,14 @@ public static class SpekExporter
             }
         }
 
+        SpectralDrop? cutoff = null;
+        if (options.ShowCutoffMarker && spectrogram is not null)
+            cutoff = spectrogram.GetProfile(0, spectrogram.Columns, info.GetStream(settings.Stream)!.SampleRate, cancellationToken).FindDrop();
+        var range = options.FrequencyRange;
+        double nyquist = info.GetStream(settings.Stream)?.SampleRate / 2.0 ?? 0;
+        if (range is not null && (range.Value.Span <= 0 || range.Value.Maximum > nyquist))
+            throw new ArgumentOutOfRangeException(nameof(options), "The frequency range must fit within the file's Nyquist frequency.");
+
         var scene = new SpekScene(
             options.ShowFullPath ? file : Path.GetFileName(file),
             SpekDescription.Describe(info, settings, options.ShowDetailedDescription, error),
@@ -48,7 +59,10 @@ public static class SpekExporter
             options.LowerDb,
             options.UpperDb,
             options.BrandName,
-            options.BrandVersion);
+            options.BrandVersion,
+            range,
+            options.ReferenceLines,
+            cutoff);
 
         var device = CanvasDevice.GetSharedDevice();
         using var target = new CanvasRenderTarget(device, width, height, 96);

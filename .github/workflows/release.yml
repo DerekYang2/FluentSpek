@@ -1,7 +1,7 @@
 name: Release
 
 # Push a tag such as v0.1.0 to publish. The tag has to match <Version> in Directory.Build.props. Running the workflow by
-# hand builds the packages and zips without publishing them.
+# hand builds the packages without publishing them. App distribution will use the Microsoft Store separately.
 on:
   push:
     tags: ['v*']
@@ -52,40 +52,10 @@ jobs:
           path: artifacts/*
           if-no-files-found: error
 
-  app:
-    name: FluentSpek (${{ matrix.platform }})
-    needs: tests
-    strategy:
-      fail-fast: false
-      matrix:
-        platform: [x64, arm64]
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-dotnet@v6
-        with:
-          dotnet-version: 10.0.x
-      - name: Download ffmpeg
-        shell: pwsh
-        run: ./scripts/Get-Ffmpeg.ps1 -Architecture ${{ matrix.platform }}
-      - name: Publish
-        run: dotnet publish src/FluentSpek/FluentSpek.csproj -c Release -p:Platform=${{ matrix.platform }} -o publish/FluentSpek
-      - name: Zip
-        shell: pwsh
-        run: |
-          if (-not (Test-Path publish/FluentSpek/ffmpeg/ffmpeg.exe)) { throw 'ffmpeg.exe is missing from the published app.' }
-          New-Item -ItemType Directory artifacts | Out-Null
-          Compress-Archive -Path publish/FluentSpek -DestinationPath "artifacts/FluentSpek-${{ github.ref_name }}-win-${{ matrix.platform }}.zip"
-      - uses: actions/upload-artifact@v7
-        with:
-          name: app-${{ matrix.platform }}
-          path: artifacts/*.zip
-          if-no-files-found: error
-
   publish:
     name: Publish to nuget.org and GitHub
     if: startsWith(github.ref, 'refs/tags/')
-    needs: [packages, app]
+    needs: packages
     runs-on: ubuntu-latest
     permissions:
       contents: write # create the GitHub release
@@ -93,8 +63,8 @@ jobs:
     steps:
       - uses: actions/download-artifact@v8
         with:
+          name: packages
           path: artifacts
-          merge-multiple: true
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
@@ -114,4 +84,8 @@ jobs:
         run: |
           prerelease=""
           if [[ "$TAG" == *-* ]]; then prerelease="--prerelease"; fi
-          gh release create "$TAG" artifacts/*.zip --repo "$GITHUB_REPOSITORY" --title "FluentSpek ${TAG#v}" --generate-notes $prerelease
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$TAG" artifacts/*.nupkg artifacts/*.snupkg --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "$TAG" artifacts/*.nupkg artifacts/*.snupkg --repo "$GITHUB_REPOSITORY" --title "Spek.NET ${TAG#v}" --generate-notes $prerelease
+          fi

@@ -113,6 +113,34 @@ public sealed class FfmpegIntegrationTests
         return best;
     }
 
+    [TestMethod]
+    public async Task MeasuresTheSpectralDropAfterMp3IsReencodedAsFlac()
+    {
+        var ffmpeg = RequireFfmpeg();
+        var mp3 = Generate("cutoff.mp3", "-f", "lavfi", "-i", "anoisesrc=d=8:r=48000:a=0.1:seed=42",
+            "-ac", "2", "-c:a", "libmp3lame", "-b:a", "128k");
+        var file = Generate("cutoff.flac", "-i", mp3, "-c:a", "flac");
+        var info = await ffmpeg.ProbeAsync(file);
+        var data = new Spectrogram(100, 1025, Palette.Spectrum, -120, 0);
+        await SpekAnalyzer.AnalyzeAsync(ffmpeg, info, new AnalysisSettings(), data);
+        var drop = data.GetProfile(20, 80, 48000).FindDrop();
+        Assert.IsNotNull(drop);
+        Assert.AreEqual(17000, drop.FrequencyHz, 800);
+        Assert.IsTrue(drop.DropDb >= 20);
+        Assert.AreEqual("flac", info.Streams[0].CodecName);
+    }
+
+    [TestMethod]
+    public async Task FullBandwidthNoiseDoesNotGetACutoffMarker()
+    {
+        var ffmpeg = RequireFfmpeg();
+        var file = Generate("broadband.flac", "-f", "lavfi", "-i", "anoisesrc=d=8:r=48000:a=0.1:seed=42", "-c:a", "flac");
+        var info = await ffmpeg.ProbeAsync(file);
+        var data = new Spectrogram(100, 1025, Palette.Spectrum, -120, 0);
+        await SpekAnalyzer.AnalyzeAsync(ffmpeg, info, new AnalysisSettings(), data);
+        Assert.IsNull(data.GetProfile(0, 100, 48000).FindDrop());
+    }
+
     private static Ffmpeg RequireFfmpeg()
     {
         if (ffmpegPath is null) Assert.Inconclusive("ffmpeg not found. Set FLUENTSPEK_FFMPEG or add ffmpeg to PATH.");
