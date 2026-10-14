@@ -49,7 +49,7 @@ With the spectrogram focused, Spek's keys work too. Each key steps forward, and 
 | `u` | Upper limit of the dB range |
 | `w` | FFT size, from 256 to 16384 samples |
 
-Settings (Ctrl+E) has the dB limits, the full path and detailed description options, the ffmpeg path, and a minimum fill-in time. Short files are analysed in a fraction of a second, so by default the spectrogram still fills in from left to right over at least 0.75 seconds. Set it to 0 to show each column as soon as it's ready.
+Settings (Ctrl+E) has the dB limits, the full path and detailed description options, the ffmpeg path, and a minimum fill-in time. Short files are analysed in a fraction of a second, so by default the spectrogram still fills in from left to right over at least 0.5 seconds. Set it to 0 to show each column as soon as it's ready, as Spek and spek-X do.
 
 Settings are saved in `%LOCALAPPDATA%\FluentSpek\settings.json`.
 

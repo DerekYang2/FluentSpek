@@ -23,7 +23,7 @@ internal sealed class AppSettings
     public int UpperDb { get; set; } = SpekDefaults.UpperDb;
     public bool ShowFullPath { get; set; } = true;
     public bool ShowDetailedDescription { get; set; }
-    public double MinimumSweepSeconds { get; set; } = 0.75;
+    public double MinimumSweepSeconds { get; set; } = 0.5;
     public int? WindowX { get; set; }
     public int? WindowY { get; set; }
     public int? WindowWidth { get; set; }
