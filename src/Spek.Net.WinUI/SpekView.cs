@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using Microsoft.Graphics.Canvas;
 using Microsoft.Graphics.Canvas.UI;
 using Microsoft.Graphics.Canvas.UI.Xaml;
@@ -33,7 +32,6 @@ public sealed partial class SpekView : UserControl
     public static readonly DependencyProperty ShowDetailedDescriptionProperty = Register(nameof(ShowDetailedDescription), typeof(bool), false, Redescribe);
     public static readonly DependencyProperty BrandNameProperty = Register(nameof(BrandName), typeof(string), null, Redraw);
     public static readonly DependencyProperty BrandVersionProperty = Register(nameof(BrandVersion), typeof(string), null, Redraw);
-    public static readonly DependencyProperty MinimumSweepDurationProperty = Register(nameof(MinimumSweepDuration), typeof(TimeSpan), TimeSpan.Zero, Redraw);
     public static readonly DependencyProperty InterpolationProperty =
         Register(nameof(Interpolation), typeof(CanvasImageInterpolation), CanvasImageInterpolation.HighQualityCubic, Redraw);
     public static readonly DependencyProperty StreamCountProperty = Register(nameof(StreamCount), typeof(int), 0, null);
@@ -44,7 +42,6 @@ public sealed partial class SpekView : UserControl
     private readonly CanvasControl canvas;
     private readonly DispatcherQueueTimer frameTimer;
     private readonly DispatcherQueueTimer resizeTimer;
-    private readonly Stopwatch sweep = new();
 
     private CancellationTokenSource? run;
     private int generation;
@@ -110,9 +107,6 @@ public sealed partial class SpekView : UserControl
     public string? BrandName { get => (string?)GetValue(BrandNameProperty); set => SetValue(BrandNameProperty, value); }
 
     public string? BrandVersion { get => (string?)GetValue(BrandVersionProperty); set => SetValue(BrandVersionProperty, value); }
-
-    // Short files analyse in a fraction of a second. A non-zero duration reveals the columns at most this fast.
-    public TimeSpan MinimumSweepDuration { get => (TimeSpan)GetValue(MinimumSweepDurationProperty); set => SetValue(MinimumSweepDurationProperty, value); }
 
     // How the FFT bins scale to the plot's height. Spek uses nearest neighbour.
     public CanvasImageInterpolation Interpolation { get => (CanvasImageInterpolation)GetValue(InterpolationProperty); set => SetValue(InterpolationProperty, value); }
@@ -336,7 +330,6 @@ public sealed partial class SpekView : UserControl
 
             spectrogram = new Spectrogram(analysedColumns, SpekDefaults.BinsFor(FftBits), Palette, LowerDb, UpperDb);
             IsAnalyzing = true;
-            sweep.Restart();
             frameTimer.Start();
             await SpekAnalyzer.AnalyzeAsync(ffmpeg, info, settings, spectrogram, token);
         }
@@ -370,17 +363,13 @@ public sealed partial class SpekView : UserControl
 
     private int VisibleColumns()
     {
-        if (spectrogram is null) return 0;
-        var minimum = MinimumSweepDuration;
-        if (minimum <= TimeSpan.Zero) return spectrogram.Columns;
-        double fraction = sweep.Elapsed / minimum;
-        return Math.Min(spectrogram.ColumnsDone, (int)Math.Ceiling(fraction * spectrogram.Columns));
+        return spectrogram?.ColumnsDone ?? 0;
     }
 
     private void OnFrame(DispatcherQueueTimer sender, object args)
     {
         canvas.Invalidate();
-        if (!IsAnalyzing && (spectrogram is null || VisibleColumns() >= spectrogram.ColumnsDone)) frameTimer.Stop();
+        if (!IsAnalyzing) frameTimer.Stop();
     }
 
     private void OnCreateResources(CanvasControl sender, CanvasCreateResourcesEventArgs args)

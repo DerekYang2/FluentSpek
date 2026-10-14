@@ -130,15 +130,6 @@
                         Minimum="-140"
                         SpinButtonPlacementMode="Compact" />
                 </StackPanel>
-                <NumberBox
-                    x:Name="SweepBox"
-                    Description="Short files are analysed in a fraction of a second. The spectrogram still fills in from left to right over at least this long. 0 shows each column as soon as it's ready."
-                    Header="Minimum fill-in time (seconds)"
-                    LargeChange="0.5"
-                    Maximum="10"
-                    Minimum="0"
-                    SmallChange="0.25"
-                    SpinButtonPlacementMode="Compact" />
                 <TextBox
                     x:Name="FfmpegBox"
                     Header="ffmpeg.exe"

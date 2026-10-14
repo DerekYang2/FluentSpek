@@ -41,7 +41,6 @@ public sealed partial class MainWindow : Window
         Spek.UpperDb = settings.UpperDb;
         Spek.ShowFullPath = settings.ShowFullPath;
         Spek.ShowDetailedDescription = settings.ShowDetailedDescription;
-        Spek.MinimumSweepDuration = TimeSpan.FromSeconds(settings.MinimumSweepSeconds);
 
         foreach (var property in new[]
         {
@@ -112,7 +111,6 @@ public sealed partial class MainWindow : Window
         DetailedToggle.IsOn = Spek.ShowDetailedDescription;
         UpperBox.Value = Spek.UpperDb;
         LowerBox.Value = Spek.LowerDb;
-        SweepBox.Value = Spek.MinimumSweepDuration.TotalSeconds;
         FfmpegBox.Text = settings.FfmpegPath ?? "";
         FfmpegStatus.Text = Spek.FfmpegPath is { } found ? $"Using {found}" : "ffmpeg wasn't found.";
 
@@ -128,7 +126,6 @@ public sealed partial class MainWindow : Window
             Spek.LowerDb = Math.Max(lower, SpekDefaults.MinDb);
             Spek.UpperDb = Math.Min(upper, SpekDefaults.MaxDb);
         }
-        if (!double.IsNaN(SweepBox.Value)) Spek.MinimumSweepDuration = TimeSpan.FromSeconds(Math.Clamp(SweepBox.Value, 0, 10));
 
         var ffmpeg = FfmpegBox.Text.Trim().Trim('"');
         settings.FfmpegPath = ffmpeg.Length == 0 ? null : ffmpeg;
@@ -228,7 +225,6 @@ public sealed partial class MainWindow : Window
         settings.UpperDb = Spek.UpperDb;
         settings.ShowFullPath = Spek.ShowFullPath;
         settings.ShowDetailedDescription = Spek.ShowDetailedDescription;
-        settings.MinimumSweepSeconds = Spek.MinimumSweepDuration.TotalSeconds;
 
         if (AppWindow.Presenter is OverlappedPresenter presenter)
         {

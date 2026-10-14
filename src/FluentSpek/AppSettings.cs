@@ -23,7 +23,6 @@ internal sealed class AppSettings
     public int UpperDb { get; set; } = SpekDefaults.UpperDb;
     public bool ShowFullPath { get; set; } = true;
     public bool ShowDetailedDescription { get; set; }
-    public double MinimumSweepSeconds { get; set; } = 0.5;
     public int? WindowX { get; set; }
     public int? WindowY { get; set; }
     public int? WindowWidth { get; set; }
@@ -73,7 +72,6 @@ internal sealed class AppSettings
         FftBits = Math.Clamp(FftBits, SpekDefaults.MinFftBits, SpekDefaults.MaxFftBits);
         UpperDb = Math.Clamp(UpperDb, SpekDefaults.MinDb + 1, SpekDefaults.MaxDb);
         LowerDb = Math.Clamp(LowerDb, SpekDefaults.MinDb, UpperDb - 1);
-        MinimumSweepSeconds = Math.Clamp(MinimumSweepSeconds, 0, 10);
         if (!Enum.IsDefined(Palette)) Palette = Palettes.Default;
         if (!Enum.IsDefined(WindowFunction)) WindowFunction = WindowFunction.Hann;
     }

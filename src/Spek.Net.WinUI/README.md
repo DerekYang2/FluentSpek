@@ -16,7 +16,7 @@ await Spectrogram.SaveAsync(@"C:\Temp\song.png");
 
 - Changing `FilePath`, `Stream`, `Channel`, `FftBits` or `WindowFunction`, or the control's width, analyses again. Changing `Palette`, `LowerDb` or `UpperDb` recolours what's there.
 - `StreamCount`, `ChannelCount`, `Description` and `IsAnalyzing` report the current file, and `AnalysisCompleted` fires when a file is done.
-- `ShowFullPath`, `ShowDetailedDescription`, `BrandName`, `BrandVersion`, `MinimumSweepDuration` and `Interpolation` change how it looks.
+- `ShowFullPath`, `ShowDetailedDescription`, `BrandName`, `BrandVersion` and `Interpolation` change how it looks.
 - With focus, the control takes Spek's keys: `c`, `f`, `l`, `p`, `s`, `u` and `w`, with Shift to step back.
 - `SpekExporter.ExportAsync` renders a file to a PNG without a window.
 
