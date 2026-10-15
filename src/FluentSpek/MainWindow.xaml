@@ -17,7 +17,9 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <TitleBar x:Name="AppTitleBar" Title="FluentSpek" />
@@ -26,8 +28,9 @@
             Grid.Row="1"
             HorizontalAlignment="Left"
             DefaultLabelPosition="Right"
-            OverflowButtonVisibility="Collapsed">
+            OverflowButtonVisibility="Auto">
             <AppBarButton
+                AutomationProperties.AutomationId="OpenFile"
                 Click="Open_Click"
                 Icon="OpenFile"
                 Label="Open"
@@ -93,6 +96,7 @@
             </AppBarButton>
             <AppBarSeparator />
             <AppBarButton
+                AutomationProperties.AutomationId="Settings"
                 Click="Settings_Click"
                 Icon="Setting"
                 Label="Settings"
@@ -103,10 +107,79 @@
             </AppBarButton>
         </CommandBar>
 
-        <spek:SpekView
-            x:Name="Spek"
-            Grid.Row="2"
-            AllowDrop="True" />
+        <Grid Grid.Row="2" Margin="16,4,16,8" ColumnSpacing="12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <ComboBox
+                x:Name="ReferenceLinesBox"
+                Width="184"
+                AutomationProperties.AutomationId="ReferenceLines"
+                Header="Reference lines"
+                SelectionChanged="ReferenceLines_Changed"
+                ToolTipService.ToolTip="Approximate LAME stereo CBR low-pass targets. Not bitrate detection.">
+                <ComboBoxItem Content="None" />
+                <ComboBoxItem Content="MP3 - LAME defaults" />
+            </ComboBox>
+            <CheckBox
+                x:Name="SpectrumToggle"
+                Grid.Column="1"
+                VerticalAlignment="Bottom"
+                AutomationProperties.AutomationId="ShowSpectrum"
+                Checked="InspectionOption_Changed"
+                Content="Spectrum profile"
+                Unchecked="InspectionOption_Changed" />
+            <CheckBox
+                x:Name="CutoffToggle"
+                Grid.Column="2"
+                VerticalAlignment="Bottom"
+                AutomationProperties.AutomationId="ShowCutoff"
+                Checked="InspectionOption_Changed"
+                Content="Cutoff marker"
+                ToolTipService.ToolTip="Measure a sustained spectral drop in the selected passage. This does not prove a lossy source."
+                Unchecked="InspectionOption_Changed" />
+            <Button
+                Grid.Column="3"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Bottom"
+                AutomationProperties.AutomationId="ResetZoom"
+                Click="ResetZoom_Click"
+                Content="Reset zoom"
+                ToolTipService.ToolTip="Reset frequency zoom (R or double-click the plot)" />
+        </Grid>
+
+        <Grid Grid.Row="3">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <spek:SpekView x:Name="Spek" AllowDrop="True" />
+            <spek:SpectrumProfileView
+                x:Name="Profile"
+                Grid.Row="1"
+                Height="180"
+                Visibility="Collapsed" />
+        </Grid>
+
+        <StackPanel Grid.Row="4" Margin="16,4,16,8" Spacing="4">
+            <TextBlock
+                AutomationProperties.AutomationId="HoverReadout"
+                MinHeight="16"
+                Style="{ThemeResource CaptionTextBlockStyle}"
+                Text="{Binding ReadoutText, ElementName=Spek}" />
+            <TextBlock
+                x:Name="InspectionStatus"
+                AutomationProperties.AutomationId="InspectionStatus"
+                Style="{ThemeResource CaptionTextBlockStyle}"
+                TextWrapping="Wrap" />
+            <TextBlock
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                Style="{ThemeResource CaptionTextBlockStyle}"
+                Text="Ctrl+wheel or +/-: frequency zoom. Drag or Shift+left/right: select time. Escape: clear selection." />
+        </StackPanel>
 
         <ContentDialog
             x:Name="SettingsDialog"

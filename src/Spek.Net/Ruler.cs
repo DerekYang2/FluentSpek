@@ -44,7 +44,7 @@ public static class Ruler
 
     public static string FormatTime(int seconds) => $"{seconds / 60}:{seconds % 60:00}";
 
-    public static string FormatFrequency(int hertz) => $"{hertz / 1000} kHz";
+    public static string FormatFrequency(int hertz) => hertz is > 0 and < 1000 ? $"{hertz} Hz" : $"{hertz / 1000.0:0.##} kHz";
 
     // The dB ruler counts up from -upper to -lower, so a unit of 120 is -120 dB.
     public static string FormatDensity(int unit) => $"{-unit} dB";

@@ -94,7 +94,45 @@ public sealed class Spectrogram
 
     public float GetValue(int x, int bin)
     {
+        if ((uint)x >= (uint)Columns) throw new ArgumentOutOfRangeException(nameof(x));
+        if ((uint)bin >= (uint)Bins) throw new ArgumentOutOfRangeException(nameof(bin));
         lock (gate) return values[x * Bins + bin];
+    }
+
+    // Average linear power across a passage. Input columns contain Spek's averaged dB values, so this is a profile
+    // of the displayed analysis, not a calibrated power spectral density. Unfinished and silent columns are excluded.
+    public SpectrumProfile GetProfile(int firstColumn, int endColumn, double sampleRate, CancellationToken cancellationToken = default)
+    {
+        if (firstColumn < 0 || firstColumn >= Columns) throw new ArgumentOutOfRangeException(nameof(firstColumn));
+        if (endColumn <= firstColumn || endColumn > Columns) throw new ArgumentOutOfRangeException(nameof(endColumn));
+        if (!double.IsFinite(sampleRate) || sampleRate <= 0) throw new ArgumentOutOfRangeException(nameof(sampleRate));
+        if (Bins < 2) throw new InvalidOperationException("A spectrum profile needs at least two bins.");
+
+        var sums = new double[Bins];
+        int included = 0;
+        lock (gate)
+        {
+            for (int x = firstColumn; x < endColumn; x++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (!hasColumn[x]) continue;
+                var column = values.AsSpan(x * Bins, Bins);
+                float peak = float.NegativeInfinity;
+                foreach (float value in column) if (value > peak) peak = value;
+                if (peak < -95) continue;
+                for (int bin = 0; bin < Bins; bin++)
+                {
+                    float value = column[bin];
+                    if (float.IsFinite(value)) sums[bin] += Math.Pow(10, value / 10.0);
+                }
+                included++;
+            }
+        }
+
+        var profile = new float[Bins];
+        for (int bin = 0; bin < Bins; bin++)
+            profile[bin] = included > 0 && sums[bin] > 0 ? (float)(10 * Math.Log10(sums[bin] / included)) : float.NegativeInfinity;
+        return new SpectrumProfile(profile, sampleRate / (2 * (Bins - 1)), included);
     }
 
     public bool HasColumn(int x)

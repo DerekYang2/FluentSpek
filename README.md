@@ -53,6 +53,17 @@ Settings (Ctrl+E) has the dB limits, the full path and detailed description opti
 
 Settings are saved in `%LOCALAPPDATA%\FluentSpek\settings.json`.
 
+### Inspecting a file
+
+- Move the pointer over the plot to read the time, frequency and spectral level. Arrow keys move the inspection cursor too.
+- Hold Ctrl and scroll to zoom the frequency axis around the pointer. `+` and `-` zoom around the middle. Press `R`, double-click the plot or use Reset zoom to restore the full frequency range. Zooming doesn't decode the file again.
+- Drag horizontally to select a time passage. Shift+left/right selects with the keyboard. Escape clears the selection.
+- Turn on Spectrum profile to see the passage's average spectral level. With no selection it covers the whole file. The profile averages linear power from the spectrogram's dB values and excludes silent and unfinished columns. It is not a calibrated power spectral density.
+- Cutoff marker looks for a sharp, sustained drop above 8 kHz in that profile. It reports the frequency and approximate drop in dB, not a source codec or bitrate. It may mark a deliberately filtered recording, and it may miss a transcode. It is not a real/fake verdict.
+- Reference lines has None and MP3 - LAME defaults. The dotted guides are nominal LAME 3.100 stereo CBR low-pass targets: 17.0 kHz for 128 kbps, 18.6 for 192, 19.7 for 256 and 20.5 for 320. These are not MP3 requirements. The actual transition depends on sample rate; other encoders, VBR, mono and custom filters can differ.
+
+The profile, marker and references are off by default. Settings remembers them. PNG export includes the current frequency zoom, references and cutoff marker, but not the cursor or selection highlight.
+
 ### Command line
 
 ```
@@ -68,7 +79,9 @@ With a PNG path, FluentSpek saves the spectrogram at WIDTH × HEIGHT pixels (100
 1. Set `<Version>` in `Directory.Build.props`, commit, and push.
 2. Tag the commit with the same version and push the tag: `git tag v0.1.0` and `git push origin v0.1.0`.
 
-The workflow runs the tests, checks that the tag matches the version, and pushes Spek.NET and Spek.NET.WinUI to nuget.org with their symbol packages. It also builds `FluentSpek-v0.1.0-win-x64.zip` and `FluentSpek-v0.1.0-win-arm64.zip`, each with the matching ffmpeg, and attaches them to a GitHub release. A tag with a hyphen, such as `v0.2.0-beta.1`, makes a prerelease. Running the workflow by hand from the Actions tab builds everything without publishing.
+The workflow runs the tests, checks that the tag matches the version, and pushes Spek.NET and Spek.NET.WinUI to nuget.org with their symbol packages. It attaches those packages to a GitHub release too. A tag with a hyphen, such as `v0.2.0-beta.1`, makes a prerelease. Running the workflow by hand from the Actions tab builds the packages without publishing.
+
+The workflow doesn't distribute portable app ZIPs. Microsoft Store packaging for the standalone app is a separate step. Local development builds still run as an unpackaged app.
 
 nuget.org uses Trusted Publishing, so the repository stores no API key. It needs a policy on nuget.org (your name > Trusted Publishing, with owner `DerekYang2`, repository `FluentSpek` and workflow `release.yml`) and a repository secret `NUGET_USER` that holds the nuget.org profile name.
 

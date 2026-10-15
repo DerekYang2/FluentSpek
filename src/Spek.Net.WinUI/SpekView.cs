@@ -75,6 +75,7 @@ public sealed partial class SpekView : UserControl
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
         SizeChanged += OnSizeChanged;
+        InitializeInspection();
     }
 
     public event EventHandler? AnalysisCompleted;
@@ -143,6 +144,7 @@ public sealed partial class SpekView : UserControl
 
     protected override void OnKeyDown(KeyRoutedEventArgs e)
     {
+        if (HandleInspectionKey(e)) return;
         if (IsDown(VirtualKey.Control) || IsDown(VirtualKey.Menu) || IsDown(VirtualKey.LeftWindows) || IsDown(VirtualKey.RightWindows))
         {
             base.OnKeyDown(e);
@@ -184,6 +186,7 @@ public sealed partial class SpekView : UserControl
     protected override void OnPointerPressed(PointerRoutedEventArgs e)
     {
         Focus(FocusState.Pointer);
+        BeginSelection(e);
         base.OnPointerPressed(e);
     }
 
@@ -193,6 +196,8 @@ public sealed partial class SpekView : UserControl
 
     private static void Reload(SpekView view)
     {
+        view.ClearSelection();
+        view.ResetFrequencyZoom();
         view.info = null;
         view.Stream = 0;
         view.Channel = 0;
@@ -235,6 +240,7 @@ public sealed partial class SpekView : UserControl
         Cancel();
         frameTimer.Stop();
         resizeTimer.Stop();
+        CancelProfile();
     }
 
     private void OnXamlRootChanged(XamlRoot sender, XamlRootChangedEventArgs args) => resizeTimer.Start();
@@ -274,7 +280,9 @@ public sealed partial class SpekView : UserControl
         var token = (run = new CancellationTokenSource()).Token;
 
         spectrogram = null;
+        image?.Dispose();
         image = null;
+        ResetProfile();
         runError = AudioError.None;
         analysedColumns = PlotColumns();
         IsAnalyzing = false;
@@ -347,6 +355,7 @@ public sealed partial class SpekView : UserControl
         if (current != generation) return;
         IsAnalyzing = false;
         canvas.Invalidate();
+        _ = RefreshProfileAsync();
         AnalysisCompleted?.Invoke(this, EventArgs.Empty);
     }
 
@@ -374,6 +383,8 @@ public sealed partial class SpekView : UserControl
 
     private void OnCreateResources(CanvasControl sender, CanvasCreateResourcesEventArgs args)
     {
+        image?.Dispose();
+        paletteImage?.Dispose();
         image = null;
         paletteImage = null;
     }
@@ -382,6 +393,7 @@ public sealed partial class SpekView : UserControl
     {
         if (paletteImage is null || paletteImageFor != Palette)
         {
+            paletteImage?.Dispose();
             paletteImage = SpekRenderer.CreatePaletteBitmap(sender, Palette);
             paletteImageFor = Palette;
         }
@@ -391,6 +403,7 @@ public sealed partial class SpekView : UserControl
         {
             if (image is null || image.SizeInPixels.Width != current.Columns || image.SizeInPixels.Height != current.Bins)
             {
+                image?.Dispose();
                 image = SpekRenderer.CreateSpectrogramBitmap(sender, current);
                 current.MarkAllDirty();
             }
@@ -399,6 +412,7 @@ public sealed partial class SpekView : UserControl
 
         // While a resize is pending, the previous image stretches to the new plot.
         SpekRenderer.Draw(args.DrawingSession, sender.Size, CreateScene(), current is null ? null : image, VisibleColumns(), paletteImage, Interpolation);
+        DrawInspection(args.DrawingSession, sender.Size);
     }
 
     private SpekScene CreateScene()
@@ -406,6 +420,7 @@ public sealed partial class SpekView : UserControl
         var path = FilePath;
         string? title = string.IsNullOrEmpty(path) ? null : ShowFullPath ? path : System.IO.Path.GetFileName(path);
         var stream = info?.GetStream(Stream);
-        return new SpekScene(title, Description, info?.Duration ?? 0, stream?.SampleRate ?? 0, LowerDb, UpperDb, BrandName, BrandVersion);
+        return new SpekScene(title, Description, info?.Duration ?? 0, stream?.SampleRate ?? 0, LowerDb, UpperDb, BrandName, BrandVersion,
+            VisibleFrequencyRange, ReferenceLines, ShowCutoffMarker ? MeasuredDrop : null);
     }
 }

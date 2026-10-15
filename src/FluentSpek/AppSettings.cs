@@ -23,6 +23,9 @@ internal sealed class AppSettings
     public int UpperDb { get; set; } = SpekDefaults.UpperDb;
     public bool ShowFullPath { get; set; } = true;
     public bool ShowDetailedDescription { get; set; }
+    public ReferenceLines ReferenceLines { get; set; } = ReferenceLines.None;
+    public bool ShowSpectrum { get; set; }
+    public bool ShowCutoffMarker { get; set; }
     public int? WindowX { get; set; }
     public int? WindowY { get; set; }
     public int? WindowWidth { get; set; }
@@ -74,6 +77,7 @@ internal sealed class AppSettings
         LowerDb = Math.Clamp(LowerDb, SpekDefaults.MinDb, UpperDb - 1);
         if (!Enum.IsDefined(Palette)) Palette = Palettes.Default;
         if (!Enum.IsDefined(WindowFunction)) WindowFunction = WindowFunction.Hann;
+        if (!Enum.IsDefined(ReferenceLines)) ReferenceLines = ReferenceLines.None;
     }
 }
 

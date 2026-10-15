@@ -65,7 +65,9 @@ public partial class App : Application
                 settings.ShowFullPath,
                 settings.ShowDetailedDescription,
                 AppInfo.Name,
-                AppInfo.Version);
+                AppInfo.Version,
+                ReferenceLines: settings.ReferenceLines,
+                ShowCutoffMarker: settings.ShowCutoffMarker);
             var info = await SpekExporter.ExportAsync(new Ffmpeg(ffmpegPath), Path.GetFullPath(commandLine.FilePath),
                 Path.GetFullPath(commandLine.PngPath), commandLine.Width, commandLine.Height, options);
             if (info.Error != AudioError.None)
