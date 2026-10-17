@@ -5,6 +5,7 @@ namespace Spek.Net.WinUI;
 
 public sealed partial class SpekView
 {
+    private const double DetailedTimeZoomThreshold = 4;
     public static readonly DependencyProperty IsRefiningProperty =
         Register(nameof(IsRefining), typeof(bool), false, null);
     public static readonly DependencyProperty RefinementStatusProperty =
@@ -14,6 +15,7 @@ public sealed partial class SpekView
     private int refinementGeneration;
     private Spectrogram? refinement;
     private TimeRange? refinementRange;
+    private AnalysisQuality? refinementQuality;
     private CanvasBitmap? refinementImage;
 
     public bool IsRefining { get => (bool)GetValue(IsRefiningProperty); private set => SetValue(IsRefiningProperty, value); }
@@ -32,6 +34,7 @@ public sealed partial class SpekView
         if (!clear) return;
         refinement = null;
         refinementRange = null;
+        refinementQuality = null;
         refinementImage?.Dispose();
         refinementImage = null;
     }
@@ -42,10 +45,12 @@ public sealed partial class SpekView
         if (!loaded || IsAnalyzing || !HasTimeZoom || spectrogram is null || settings is null || info is null
             || runError != AudioError.None || info.ErrorFor(Stream) != AudioError.None) return;
         var time = VisibleTimeRange;
+        var quality = time.Span <= info.Duration / DetailedTimeZoomThreshold ? AnalysisQuality.Detailed : AnalysisQuality.Fast;
         // Bound the additional value/pixel buffers to 32 MiB, even with a large FFT or high-DPI window.
         int columns = Math.Min(PlotColumns(), Math.Max(1, 32 * 1024 * 1024 / (spectrogram.Bins * 8)));
         if (columns <= 0) return;
         if (refinement is not null && refinementRange is { } cached && cached.Start <= time.Start && cached.End >= time.End
+            && (quality == AnalysisQuality.Fast || refinementQuality == AnalysisQuality.Detailed)
             && refinement.Columns * time.Span / cached.Span >= columns * 0.95)
         {
             RefinementStatus = "Zoom refined.";
@@ -58,7 +63,7 @@ public sealed partial class SpekView
         var token = (refinementRun = new CancellationTokenSource()).Token;
         IsRefining = true;
         RefinementStatus = "Refining zoom...";
-        _ = RefineAsync(new Ffmpeg(ffmpegPath), info, settings, time, columns, version, token);
+        _ = RefineAsync(new Ffmpeg(ffmpegPath), info, settings with { Quality = quality }, time, columns, version, token);
     }
 
     private async Task RefineAsync(Ffmpeg ffmpeg, AudioFileInfo file, AnalysisSettings analysis, TimeRange time,
@@ -87,6 +92,7 @@ public sealed partial class SpekView
             refinementImage = null;
             refinement = result;
             refinementRange = time;
+            refinementQuality = analysis.Quality;
             UpdateReadout();
             canvas.Invalidate();
             RefinementStatus = "Zoom refined.";

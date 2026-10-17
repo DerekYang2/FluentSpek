@@ -1,10 +1,18 @@
 # Fixed-grid analysis
 
-This change separates audio measurements from the displayed image. It prioritizes dense analysis for zoom rather than the old pipeline's low CPU cost. It does not change the FFT size automatically or eliminate the time/frequency tradeoff.
+This change adds dense analysis for deep zoom. It does not apply that CPU cost to initial loading or slight zoom. It does not change the FFT size automatically or eliminate the time/frequency tradeoff.
+
+## When it runs
+
+The whole-file overview and light time zoom retain the original 0.2.0 algorithm, including its column-dependent FFT scheduling and dB average. At 4x time zoom or deeper, the control opts into detailed analysis for the visible interval. For example, a 10-second view of a 3-minute track qualifies; a slight zoom of the whole track does not.
+
+`AnalysisSettings.Quality` defaults to Fast. Detailed analysis is explicit in the core API. The control selects it for deep refinement only, and cache reuse includes the quality tier so a broad fast result cannot substitute for a detailed one at the threshold. Reset always returns to the cached fast overview.
+
+This two-tier design intentionally preserves ordinary loading performance. Its tradeoff is a possible brightness/timing change when the detailed result replaces the fast preview. Consistency guarantees below apply between detailed analyses, not between the legacy overview and the detailed mode.
 
 ## Measurement grid
 
-For an FFT size N and sample rate R, the analyser uses a hop in samples of:
+In detailed mode, for FFT size N and sample rate R, the analyser uses a hop in samples of:
 
 ```text
 H = min(N / 16, max(1, round(R / 1000)))
@@ -32,13 +40,13 @@ For example, equal time at power 1 and power 0 produces power 0.5, about -3 dB. 
 
 Pixel boundaries use exact integer ratios with Int128 intermediate coordinates, so more pixels than audio samples do not produce empty-time pixels. Aligned groups of fine pixels aggregate to the corresponding coarse pixel's power, within floating-point precision.
 
-This is a mean-energy display, not peak hold. Brief events can still become faint in a broad overview. Zoom separates them from the surrounding quiet time. Peak hold would preserve their maximum strength but could overemphasize a brief tone or noise burst; it is not added by this change.
+Detailed pixels show mean energy, not peak hold. Peak hold would preserve brief maxima but could overemphasize an occasional tone or noise burst; it is not added. The normal fast overview deliberately retains its old averaging behavior.
 
 ## Scale and appearance
 
 The existing normalized FFT power scale, window functions, palettes and dB limits remain. No audio gain is applied. This is not a calibrated power spectral density, and levels from different FFT sizes are not a universal loudness comparison.
 
-Some content will appear brighter than in 0.2.0 because an arithmetic power average differs from its old dB average. This is a measurement change, not simply a cosmetic sharpening filter. The window still determines real time/frequency resolution. Image interpolation also remains a display choice and can soften drawn pixels.
+Detailed content can appear brighter than the fast preview because arithmetic power averages differ from dB averages. Centred timestamps can also move energy relative to the old trailing-window view. This is a measurement change, not just a sharpening filter. The FFT window still determines real time/frequency resolution. Image interpolation also remains a display choice and can soften drawn pixels.
 
 The profile and cutoff continue to use the cached overview's selected passage. Zoom refinement does not change that selection or replace those measurements. The 350 ms refinement debounce and immediate cached overview reset are unchanged.
 
@@ -46,11 +54,11 @@ The profile and cutoff continue to use the cached overview's selected passage. Z
 
 The pipeline streams. It keeps a ring buffer, FFT work arrays and one column's power sums, not a whole-file history of dense FFTs. The existing overview/detail pixel buffers and one-interval cache remain. Extra working memory scales with FFT size, not track duration.
 
-The main cost is CPU. Whole-track analysis at large FFT sizes is much slower. Range refinement only analyses the visible interval plus context, so its work remains bounded by the requested passage. Cancellation is checked between FFTs as well as at decoder reads, and work remains off the UI thread.
+The main cost is CPU in detailed mode. The UI does not run detailed whole-track analysis. Deep range refinement only analyses the visible interval plus context. Cancellation is checked between dense FFTs as well as at decoder reads, and work remains off the UI thread.
 
 ### Synthetic benchmark
 
-One warmed run on this development machine, 48 kHz mono noise, 1000 output columns, Release build. These timings include pipeline analysis and pixel colouring, not ffmpeg decoding or GPU rendering. They are observations, not performance guarantees.
+One warmed run on this development machine, 48 kHz mono noise, 1000 output columns, Release build. These timings compare the legacy algorithm with explicitly requested detailed analysis. The expensive detailed 30-second overview is a diagnostic, not the normal UI path. Timings include pipeline analysis and pixel colouring, not decoding or GPU rendering. They are observations, not performance guarantees.
 
 | FFT | 0.2.0, 30 s overview | Fixed grid, 30 s overview | 0.2.0, 1 s crop | Fixed grid, 1 s crop |
 | --- | ---: | ---: | ---: | ---: |
@@ -61,6 +69,8 @@ One warmed run on this development machine, 48 kHz mono noise, 1000 output colum
 
 Allocation stayed within about 0.07 MiB of the previous pipeline for each case. The 1000-column 16384-sample benchmark uses larger output buffers than the UI's 32 MiB refinement cap permits; the benchmark keeps the output dimensions identical between implementations.
 
+After scoping detailed analysis to deep zoom, a separate warmed 20-second FLAC overview benchmark through the analyser measured 116 ms with published 0.2.0 and 111 ms with the default Fast path at 2048 samples. At 8192 samples it measured 251 ms and 208 ms. These single-run differences are normal timing variability; the relevant result is that normal loading still uses the old algorithm rather than the expensive detailed path.
+
 ## Verification
 
 - Coarse pixels equal the energy average of aligned fine pixels.
@@ -70,3 +80,5 @@ Allocation stayed within about 0.07 MiB of the previous pipeline for each case. 
 - An impulse stays near its actual timestamp instead of shifting by half an FFT.
 - Silence, partial cells, early EOF, extra samples, fractional pixel widths and cancellation have dedicated tests.
 - Existing channel, multi-stream, MP3/Opus range, cutoff and FFT reference tests remain in the suite.
+- The fast path matches reference values captured from the published 0.2.0 package, and the analyser defaults to Fast.
+- Control checks verify fast initial loading, fast light zoom, the exact 4x threshold, and replacement of a nearly identical fast cached result when detailed quality is required.

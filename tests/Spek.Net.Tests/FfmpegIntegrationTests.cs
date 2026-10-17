@@ -225,8 +225,9 @@ public sealed class FfmpegIntegrationTests
         int first = rate + 700;
         var whole = new Spectrogram(rate * 3 / 100, 1025, Palette.Spectrum, -120, 0);
         var crop = new Spectrogram(100, 1025, Palette.Spectrum, -120, 0);
-        await SpekAnalyzer.AnalyzeAsync(ffmpeg, info, new(), whole);
-        await SpekAnalyzer.AnalyzeRangeAsync(ffmpeg, info, new(), crop,
+        var settings = new AnalysisSettings { Quality = AnalysisQuality.Detailed };
+        await SpekAnalyzer.AnalyzeAsync(ffmpeg, info, settings, whole);
+        await SpekAnalyzer.AnalyzeRangeAsync(ffmpeg, info, settings, crop,
             new TimeRange(first / (double)rate, (first + 10000) / (double)rate));
         Assert.AreEqual(100, crop.ColumnsDone);
         for (int x = 0; x < crop.Columns; x++)

@@ -72,9 +72,9 @@ The profile, marker and references are off by default. Settings remembers them. 
 
 Samples is the FFT window size, not the song's sample rate or the image width. A smaller window gives finer timing but coarser frequency detail. A larger window gives finer frequency detail but spreads a short event across a longer time interval. At 48 kHz, 512 samples span about 11 ms, 2048 span 43 ms, and 8192 span 171 ms. The FFT bin spacing is the sample rate divided by the window size. The window function also affects how well nearby frequencies can be separated.
 
-Use smaller windows to inspect brief events and larger windows to inspect sustained tones or spectral edges. Zoom level alone does not determine the best setting. Background zoom refinement recomputes the same measurement grid into narrower time columns without changing the FFT size.
+Use smaller windows to inspect brief events and larger windows to inspect sustained tones or spectral edges. Zoom level alone does not determine the best setting. Background refinement keeps the chosen FFT size.
 
-The current analysis uses a dense, file-anchored FFT grid rather than choosing FFT positions from the image columns. Windows are centred on their timestamps. Pixels combine linear power by time coverage before conversion to dB. This makes aligned overview and detail pixels consistent without changing your selected FFT size. It can cost much more CPU for whole-track views at large FFT sizes. See [the design decisions and benchmarks](docs/fixed-grid-analysis.md).
+Whole-file views and light time zoom retain the existing fast analysis. At 4x time zoom or deeper, background refinement uses a dense, file-anchored FFT grid, centred windows and time-weighted linear-power pixels. This spends the extra CPU on the zoomed passage, not initial loading. Crossing the quality threshold can change brightness and event placement slightly because the two modes use different measurements. See [the design decisions and benchmarks](docs/fixed-grid-analysis.md).
 
 ### Command line
 
@@ -99,7 +99,7 @@ nuget.org uses Trusted Publishing, so the repository stores no API key. It needs
 
 ## Differences from Spek
 
-- FFT positions are anchored to the file, not the current image width. Centred windows avoid the trailing-window time offset, and columns average linear power instead of dB. The earlier Spek-compatible pipeline also fixed Spek's repeated frame-counting bug; the current pipeline replaces its column-dependent FFT scheduling.
+- Detailed zoom uses file-anchored, centred FFTs and linear-power pixel averages. Normal overviews retain the fast Spek-style scheduling and dB averaging. The original pipeline also fixes Spek's repeated frame-counting bug.
 - Values at or above the upper dB limit are red in the Spectrum palette. Spek's palette function skips the top value, so those pixels come out black. That shows when the limit is lowered with `U`, because with Hann windowing nothing reaches the default 0 dB limit.
 - The Blackman-Harris window uses the exact cosine terms. Spek reads them from a table indexed modulo the window size.
 - Changing the palette or the dB range recolours the existing analysis instead of decoding the file again.
