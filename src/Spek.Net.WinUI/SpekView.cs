@@ -130,16 +130,19 @@ public sealed partial class SpekView : UserControl
         using (var ds = target.CreateDrawingSession())
         {
             using var palette = SpekRenderer.CreatePaletteBitmap(device, Palette);
-            CanvasBitmap? bitmap = null;
-            if (spectrogram is not null)
-            {
-                bitmap = SpekRenderer.CreateSpectrogramBitmap(device, spectrogram);
-                bitmap.SetPixelBytes(spectrogram.CopyPixels());
-            }
-            SpekRenderer.Draw(ds, size, CreateScene(), bitmap, VisibleColumns(), palette, Interpolation);
-            bitmap?.Dispose();
+            using var bitmap = CopyBitmap(device, spectrogram);
+            using var detail = HasTimeZoom ? CopyBitmap(device, refinement) : null;
+            SpekRenderer.Draw(ds, size, CreateScene(), bitmap, VisibleColumns(), palette, Interpolation, detail, refinementRange, refinement?.ColumnsDone ?? 0);
         }
         await target.SaveAsync(path, CanvasBitmapFileFormat.Png);
+    }
+
+    private static CanvasBitmap? CopyBitmap(ICanvasResourceCreator creator, Spectrogram? data)
+    {
+        if (data is null) return null;
+        var bitmap = SpekRenderer.CreateSpectrogramBitmap(creator, data);
+        bitmap.SetPixelBytes(data.CopyPixels());
+        return bitmap;
     }
 
     protected override void OnKeyDown(KeyRoutedEventArgs e)
@@ -197,7 +200,7 @@ public sealed partial class SpekView : UserControl
     private static void Reload(SpekView view)
     {
         view.ClearSelection();
-        view.ResetFrequencyZoom();
+        view.ResetZoom();
         view.info = null;
         view.Stream = 0;
         view.Channel = 0;
@@ -210,6 +213,7 @@ public sealed partial class SpekView : UserControl
     {
         if (view.LowerDb >= view.UpperDb) return;
         view.spectrogram?.SetRangeAndPalette(view.Palette, view.LowerDb, view.UpperDb);
+        view.refinement?.SetRangeAndPalette(view.Palette, view.LowerDb, view.UpperDb);
         view.canvas.Invalidate();
     }
 
@@ -241,6 +245,7 @@ public sealed partial class SpekView : UserControl
         frameTimer.Stop();
         resizeTimer.Stop();
         CancelProfile();
+        CancelRefinement(clear: true);
     }
 
     private void OnXamlRootChanged(XamlRoot sender, XamlRootChangedEventArgs args) => resizeTimer.Start();
@@ -276,6 +281,7 @@ public sealed partial class SpekView : UserControl
     {
         if (!loaded) return;
         Cancel();
+        CancelRefinement(clear: true);
         int current = generation;
         var token = (run = new CancellationTokenSource()).Token;
 
@@ -356,6 +362,7 @@ public sealed partial class SpekView : UserControl
         IsAnalyzing = false;
         canvas.Invalidate();
         _ = RefreshProfileAsync();
+        ScheduleRefinement();
         AnalysisCompleted?.Invoke(this, EventArgs.Empty);
     }
 
@@ -385,8 +392,10 @@ public sealed partial class SpekView : UserControl
     {
         image?.Dispose();
         paletteImage?.Dispose();
+        refinementImage?.Dispose();
         image = null;
         paletteImage = null;
+        refinementImage = null;
     }
 
     private void OnDraw(CanvasControl sender, CanvasDrawEventArgs args)
@@ -411,7 +420,17 @@ public sealed partial class SpekView : UserControl
         }
 
         // While a resize is pending, the previous image stretches to the new plot.
-        SpekRenderer.Draw(args.DrawingSession, sender.Size, CreateScene(), current is null ? null : image, VisibleColumns(), paletteImage, Interpolation);
+        if (HasTimeZoom && refinement is { } detail)
+        {
+            if (refinementImage is null)
+            {
+                refinementImage = SpekRenderer.CreateSpectrogramBitmap(sender, detail);
+                detail.MarkAllDirty();
+            }
+            SpekRenderer.Upload(detail, refinementImage);
+        }
+        SpekRenderer.Draw(args.DrawingSession, sender.Size, CreateScene(), current is null ? null : image, VisibleColumns(), paletteImage,
+            Interpolation, HasTimeZoom ? refinementImage : null, refinementRange, refinement?.ColumnsDone ?? 0);
         DrawInspection(args.DrawingSession, sender.Size);
     }
 
@@ -421,6 +440,6 @@ public sealed partial class SpekView : UserControl
         string? title = string.IsNullOrEmpty(path) ? null : ShowFullPath ? path : System.IO.Path.GetFileName(path);
         var stream = info?.GetStream(Stream);
         return new SpekScene(title, Description, info?.Duration ?? 0, stream?.SampleRate ?? 0, LowerDb, UpperDb, BrandName, BrandVersion,
-            VisibleFrequencyRange, ReferenceLines, ShowCutoffMarker ? MeasuredDrop : null);
+            VisibleFrequencyRange, ReferenceLines, ShowCutoffMarker ? MeasuredDrop : null, VisibleTimeRange);
     }
 }

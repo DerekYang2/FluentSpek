@@ -141,6 +141,78 @@ public sealed class FfmpegIntegrationTests
         Assert.IsNull(data.GetProfile(0, 100, 48000).FindDrop());
     }
 
+    [TestMethod]
+    public async Task RangeDecodeMatchesTheCorrespondingLosslessSamples()
+    {
+        var ffmpeg = RequireFfmpeg();
+        var file = Generate("range-noise.flac", "-f", "lavfi", "-i", "anoisesrc=d=3:r=48000:a=0.2:seed=42", "-c:a", "flac");
+        var full = new List<float>();
+        await ffmpeg.DecodeAsync(file, 0, 0, samples => full.AddRange(samples.ToArray()));
+        var cropped = new List<float>();
+        var range = new TimeRange(1.125, 1.375);
+        await ffmpeg.DecodeRangeAsync(file, 0, 0, range, samples => cropped.AddRange(samples.ToArray()));
+        Assert.AreEqual(12000, cropped.Count);
+        CollectionAssert.AreEqual(full.Skip(54000).Take(12000).ToArray(), cropped.ToArray());
+    }
+
+    [TestMethod]
+    public async Task RefinementUsesPrecedingAudioForTheFirstFft()
+    {
+        var ffmpeg = RequireFfmpeg();
+        var file = Generate("range-context.flac", "-f", "lavfi", "-i", "aevalsrc=0.5*sin(2*PI*1000*t):s=48000:d=3", "-c:a", "flac");
+        var info = await ffmpeg.ProbeAsync(file);
+        var target = new Spectrogram(200, 1025, Palette.Spectrum, -120, 0);
+        await SpekAnalyzer.AnalyzeRangeAsync(ffmpeg, info, new AnalysisSettings(), target, new TimeRange(1, 1.1));
+        Assert.AreEqual(200, target.ColumnsDone);
+        Assert.IsTrue(target.GetValue(0, 43) > -25, "The first column must not start with a zero-padded FFT.");
+        Assert.AreEqual(target.GetValue(100, 43), target.GetValue(0, 43), 1);
+    }
+
+    [TestMethod]
+    [DataRow("flac", "flac")]
+    [DataRow("mp3", "libmp3lame")]
+    [DataRow("opus", "libopus")]
+    public async Task RefinedIntervalHasFullWidthAndCorrectTimeAlignment(string extension, string codec)
+    {
+        var ffmpeg = RequireFfmpeg();
+        var file = Generate($"range-change.{extension}",
+            "-f", "lavfi", "-i", "aevalsrc=0.25*sin(2*PI*(1000+4000*gte(t\\,2))*t):s=48000:d=4", "-c:a", codec);
+        var info = await ffmpeg.ProbeAsync(file);
+        var target = new Spectrogram(400, 1025, Palette.Spectrum, -120, 0);
+        await SpekAnalyzer.AnalyzeRangeAsync(ffmpeg, info, new AnalysisSettings(), target, new TimeRange(1.5, 2.5));
+        Assert.AreEqual(400, target.ColumnsDone);
+        Assert.IsTrue(target.GetValue(50, 43) > target.GetValue(50, 213) + 20, "The interval should begin in the 1 kHz section.");
+        Assert.IsTrue(target.GetValue(350, 213) > target.GetValue(350, 43) + 20, "The interval should end in the 5 kHz section.");
+        Assert.IsTrue(info.Duration / target.Columns > 1.0 / target.Columns, "The refined interval must have finer time sampling than the whole-file view.");
+    }
+
+    [TestMethod]
+    public async Task CancellingARangeDecodeStopsItsProcess()
+    {
+        var ffmpeg = RequireFfmpeg();
+        var file = Generate("range-cancel.flac", "-f", "lavfi", "-i", "anoisesrc=d=10:r=48000", "-c:a", "flac");
+        using var cancellation = new CancellationTokenSource();
+        var watch = Stopwatch.StartNew();
+        await Assert.ThrowsAsync<OperationCanceledException>(() => ffmpeg.DecodeRangeAsync(file, 0, 0,
+            new TimeRange(1, 9), _ => cancellation.Cancel(), cancellation.Token));
+        Assert.IsTrue(watch.Elapsed < TimeSpan.FromSeconds(5));
+    }
+
+    [TestMethod]
+    public async Task InvalidAndCancelledRefinementRequestsAreRejected()
+    {
+        var ffmpeg = RequireFfmpeg();
+        var info = new AudioFileInfo("unused", AudioError.None, 10, [new("flac", "FLAC", 48000, 1, 16, 0)]);
+        var target = new Spectrogram(10, 1025, Palette.Spectrum, -120, 0);
+        Assert.Throws<ArgumentOutOfRangeException>(() => SpekAnalyzer.AnalyzeRangeAsync(ffmpeg, info, new(), target, new TimeRange(9, 11)));
+        Assert.Throws<ArgumentOutOfRangeException>(() => SpekAnalyzer.AnalyzeRangeAsync(ffmpeg, info, new(Channel: 1), target, new TimeRange(1, 2)));
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        await Assert.ThrowsAsync<OperationCanceledException>(() => SpekAnalyzer.AnalyzeRangeAsync(ffmpeg, info, new(), target,
+            new TimeRange(1, 2), cancellation.Token));
+        Assert.AreEqual(0, target.ColumnsDone);
+    }
+
     private static Ffmpeg RequireFfmpeg()
     {
         if (ffmpegPath is null) Assert.Inconclusive("ffmpeg not found. Set FLUENTSPEK_FFMPEG or add ffmpeg to PATH.");

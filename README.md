@@ -33,6 +33,8 @@ FluentSpek looks for ffmpeg in this order:
 
 The tests that run ffmpeg use `FLUENTSPEK_FFMPEG`, then `PATH`, and report inconclusive if neither has it.
 
+`scripts/Test-RefinementUI.ps1` checks a running FluentSpek window in Sandbox with a 20-second, 48 kHz audio fixture already open. Pass its guest process ID with `-AppPid` and a host evidence folder with `-ArtifactDirectory`. It checks centered zoom, reset, pointer-anchored wheel zoom and rapid zoom changes after background refinement. Results and screenshots go to the evidence folder. This script does not automate file pickers.
+
 ## Using FluentSpek
 
 Open a file with the Open button, Ctrl+O, by dropping it on the window, or from the command line. The toolbar changes the palette, window function, FFT size, channel and stream, and Ctrl+S saves the view as a PNG.
@@ -56,13 +58,14 @@ Settings are saved in `%LOCALAPPDATA%\FluentSpek\settings.json`.
 ### Inspecting a file
 
 - Move the pointer over the plot to read the time, frequency and spectral level. Arrow keys move the inspection cursor too.
-- Hold Ctrl and scroll to zoom the frequency axis around the pointer. `+` and `-` zoom around the middle. Press `R`, double-click the plot or use Reset zoom to restore the full frequency range. Zooming doesn't decode the file again.
+- The crosshair is visible only while Spectrum profile is enabled. The time, frequency and level readout still works with the profile off.
+- Hold Ctrl and scroll to zoom both time and frequency around the pointer. `+` and `-` zoom both axes around the center of the visible plot. The current image scales immediately. After zooming stops for 350 ms, the visible time range is analysed again in the background with more columns. The old image stays visible until its replacement is ready. The FFT size and frequency resolution stay unchanged. Press `R`, double-click the plot or use Reset zoom to restore the cached whole-file view immediately.
 - Drag horizontally to select a time passage. Shift+left/right selects with the keyboard. Escape clears the selection.
 - Turn on Spectrum profile to see the passage's average spectral level. With no selection it covers the whole file. The profile averages linear power from the spectrogram's dB values and excludes silent and unfinished columns. It is not a calibrated power spectral density.
 - Cutoff marker looks for a sharp, sustained drop above 8 kHz in that profile. It reports the frequency and approximate drop in dB, not a source codec or bitrate. It may mark a deliberately filtered recording, and it may miss a transcode. It is not a real/fake verdict.
 - Reference lines has None and MP3 - LAME defaults. The dotted guides are nominal LAME 3.100 stereo CBR low-pass targets: 17.0 kHz for 128 kbps, 18.6 for 192, 19.7 for 256 and 20.5 for 320. These are not MP3 requirements. The actual transition depends on sample rate; other encoders, VBR, mono and custom filters can differ.
 
-The profile, marker and references are off by default. Settings remembers them. PNG export includes the current frequency zoom, references and cutoff marker, but not the cursor or selection highlight.
+The profile, marker and references are off by default. Settings remembers them. PNG export includes the current time and frequency zoom, available refined detail, references and cutoff marker, but not the cursor or selection highlight. Saving does not wait for pending refinement. Zooming does not change the analysis passage; select a passage to change the profile or cutoff measurement. The profile and cutoff continue to use the whole-file analysis, so their results do not change when zoom detail arrives.
 
 ### Command line
 
@@ -77,7 +80,7 @@ With a PNG path, FluentSpek saves the spectrogram at WIDTH × HEIGHT pixels (100
 `.github/workflows/release.yml` publishes a version when its tag is pushed:
 
 1. Set `<Version>` in `Directory.Build.props`, commit, and push.
-2. Tag the commit with the same version and push the tag: `git tag v0.1.0` and `git push origin v0.1.0`.
+2. Tag the commit with the same version and push the tag: `git tag v0.2.0` and `git push origin v0.2.0`.
 
 The workflow runs the tests, checks that the tag matches the version, and pushes Spek.NET and Spek.NET.WinUI to nuget.org with their symbol packages. It attaches those packages to a GitHub release too. A tag with a hyphen, such as `v0.2.0-beta.1`, makes a prerelease. Running the workflow by hand from the Actions tab builds the packages without publishing.
 

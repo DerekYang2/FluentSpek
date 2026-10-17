@@ -25,6 +25,7 @@ await SpekAnalyzer.AnalyzeAsync(ffmpeg, info, settings, spectrogram);
 - `SpectrogramPipeline` is the column maths on its own, for samples from another decoder.
 - `SpekDescription` and `Ruler` give Spek's description line and ruler ticks.
 - `Spectrogram.GetProfile(firstColumn, endColumn, sampleRate)` measures a selected passage's spectrum. `SpectrumProfile.FindDrop()` returns an optional measured spectral drop, not an estimate of the original codec or bitrate. A deliberately low-pass-filtered master can produce the same result.
-- `FrequencyRange` handles frequency coordinates and anchored zoom. `EncoderReferences.Mp3Lame` lists nominal LAME stereo CBR low-pass targets as optional inspection guides, not universal MP3 boundaries.
+- `FrequencyRange` and `TimeRange` handle coordinates and anchored zoom. `EncoderReferences.Mp3Lame` lists nominal LAME stereo CBR low-pass targets as optional inspection guides, not universal MP3 boundaries.
+- `SpekAnalyzer.AnalyzeRangeAsync` fills a separate spectrogram for an absolute time interval. It seeks with ffmpeg, decodes preceding audio for the first FFT's context, and excludes that context from the target's time interval. `Ffmpeg.DecodeRangeAsync` exposes the bounded PCM decode. Cancellation stops the child process.
 
 Licensed under GPL-3.0, like Spek. Source: https://github.com/DerekYang2/FluentSpek

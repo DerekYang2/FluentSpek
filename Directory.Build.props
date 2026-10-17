@@ -1,7 +1,7 @@
 <Project>
   <PropertyGroup>
-    <!-- One version for the packages and the app. A release tag must match it: v0.1.0 for 0.1.0. -->
-    <Version>0.1.0</Version>
+    <!-- One version for the packages and the app. The release tag must match this version. -->
+    <Version>0.2.0</Version>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>

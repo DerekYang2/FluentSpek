@@ -15,7 +15,8 @@ public sealed record ExportOptions(
     CanvasImageInterpolation Interpolation = CanvasImageInterpolation.HighQualityCubic,
     ReferenceLines ReferenceLines = ReferenceLines.None,
     bool ShowCutoffMarker = false,
-    FrequencyRange? FrequencyRange = null);
+    FrequencyRange? FrequencyRange = null,
+    TimeRange? TimeRange = null);
 
 // Analyses a file and saves the whole view as a PNG without showing a window, like "spek FILE PNG WIDTH HEIGHT".
 public static class SpekExporter
@@ -50,6 +51,8 @@ public static class SpekExporter
         double nyquist = info.GetStream(settings.Stream)?.SampleRate / 2.0 ?? 0;
         if (range is not null && (range.Value.Span <= 0 || range.Value.Maximum > nyquist))
             throw new ArgumentOutOfRangeException(nameof(options), "The frequency range must fit within the file's Nyquist frequency.");
+        if (options.TimeRange is { } time && (time.Span <= 0 || time.End > info.Duration))
+            throw new ArgumentOutOfRangeException(nameof(options), "The time range must fit within the file's duration.");
 
         var scene = new SpekScene(
             options.ShowFullPath ? file : Path.GetFileName(file),
@@ -62,7 +65,8 @@ public static class SpekExporter
             options.BrandVersion,
             range,
             options.ReferenceLines,
-            cutoff);
+            cutoff,
+            options.TimeRange);
 
         var device = CanvasDevice.GetSharedDevice();
         using var target = new CanvasRenderTarget(device, width, height, 96);

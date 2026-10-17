@@ -52,6 +52,17 @@ public sealed class SpectrogramPipeline
 
     public bool IsDone => column >= columns;
 
+    // Supply preceding audio for the first FFT without including it in the column timestamps or averages.
+    public void Prime(ReadOnlySpan<float> samples)
+    {
+        if (frames != 0 || column != 0) throw new InvalidOperationException("Prime the pipeline before pushing analysis samples.");
+        foreach (float sample in samples)
+        {
+            ring[ringPos] = sample;
+            ringPos = (ringPos + 1) & mask;
+        }
+    }
+
     public void Push(ReadOnlySpan<float> samples)
     {
         EndEmptyColumns();

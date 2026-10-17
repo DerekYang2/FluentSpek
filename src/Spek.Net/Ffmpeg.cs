@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -65,7 +66,7 @@ public sealed class Ffmpeg(string executablePath)
         return FfmpegOutputParser.ParseInput(file, stderr, name => decoders?.GetValueOrDefault(name));
     }
 
-    public async Task DecodeAsync(string file, int stream, int channel, SampleHandler onSamples, CancellationToken cancellationToken = default)
+    public Task DecodeAsync(string file, int stream, int channel, SampleHandler onSamples, CancellationToken cancellationToken = default)
     {
         string[] args =
         [
@@ -76,6 +77,27 @@ public sealed class Ffmpeg(string executablePath)
             "-f", "f32le", "-acodec", "pcm_f32le", "-",
         ];
 
+        return DecodeCoreAsync(args, onSamples, cancellationToken);
+    }
+
+    public Task DecodeRangeAsync(string file, int stream, int channel, TimeRange range, SampleHandler onSamples, CancellationToken cancellationToken = default)
+    {
+        if (range.Span <= 0) throw new ArgumentOutOfRangeException(nameof(range));
+        string[] args =
+        [
+            "-hide_banner", "-nostdin", "-v", "error",
+            // Input seeking uses ffmpeg's accurate seek when transcoding. It decodes and discards the seek preroll.
+            "-ss", range.Start.ToString("R", CultureInfo.InvariantCulture), "-i", file,
+            "-t", range.Span.ToString("R", CultureInfo.InvariantCulture),
+            "-map", $"0:a:{stream}", "-af", $"pan=mono|c0=c{channel}",
+            "-f", "f32le", "-acodec", "pcm_f32le", "-",
+        ];
+        return DecodeCoreAsync(args, onSamples, cancellationToken);
+    }
+
+    private async Task DecodeCoreAsync(string[] args, SampleHandler onSamples, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
         using var process = Start(args);
         var stderrTask = process.StandardError.ReadToEndAsync(CancellationToken.None);
         await using var registration = cancellationToken.Register(() => Kill(process));

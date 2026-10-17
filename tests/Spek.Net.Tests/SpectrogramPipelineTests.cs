@@ -126,6 +126,30 @@ public sealed class SpectrogramPipelineTests
         Assert.AreEqual(0, spectrogram.Pixels[(1 * 2 + 1) * 4]);
     }
 
+    [TestMethod]
+    public void PrimingSuppliesFftContextWithoutAdvancingColumns()
+    {
+        float[]? result = null;
+        var pipeline = new SpectrogramPipeline(8, WindowFunction.Hann, 1, 64, (_, values) => result = values.ToArray());
+        var context = Enumerable.Repeat(1f, 256).ToArray();
+        pipeline.Prime(context.AsSpan(0, 100));
+        pipeline.Prime(context.AsSpan(100));
+        Assert.AreEqual(0, pipeline.ColumnsDone);
+        pipeline.Push(context.AsSpan(0, 64));
+        pipeline.Complete();
+        Assert.AreEqual(1, pipeline.ColumnsDone);
+        Assert.IsNotNull(result);
+        Assert.AreEqual(-6.0206, result[0], 0.1);
+    }
+
+    [TestMethod]
+    public void CannotPrimeAfterAnalysisHasStarted()
+    {
+        var pipeline = new SpectrogramPipeline(8, WindowFunction.Hann, 1, 64, (_, _) => { });
+        pipeline.Push([1f]);
+        Assert.Throws<InvalidOperationException>(() => pipeline.Prime([1f]));
+    }
+
     private static void PushInChunks(SpectrogramPipeline pipeline, float[] samples, int chunk)
     {
         for (int i = 0; i < samples.Length; i += chunk)

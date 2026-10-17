@@ -21,7 +21,8 @@ internal sealed record SpekScene(
     string? BrandVersion,
     FrequencyRange? FrequencyRange = null,
     ReferenceLines ReferenceLines = ReferenceLines.None,
-    SpectralDrop? Cutoff = null);
+    SpectralDrop? Cutoff = null,
+    TimeRange? TimeRange = null);
 
 // Draws Spek's layout: the title and description above the plot, the time ruler below it, the frequency ruler on the
 // left, and the palette with its dB ruler on the right. Sizes are in device-independent pixels.
@@ -54,7 +55,10 @@ internal static class SpekRenderer
         CanvasBitmap? spectrogram,
         int visibleColumns,
         CanvasBitmap palette,
-        CanvasImageInterpolation interpolation)
+        CanvasImageInterpolation interpolation,
+        CanvasBitmap? refinement = null,
+        TimeRange? refinementTimeRange = null,
+        int refinementColumns = int.MaxValue)
     {
         float w = (float)size.Width, h = (float)size.Height;
         ds.Clear(Colors.Black);
@@ -80,18 +84,16 @@ internal static class SpekRenderer
         var plot = PlotRect(size);
         float plotW = (float)plot.Width, plotH = (float)plot.Height;
         var range = scene.FrequencyRange ?? new FrequencyRange(0, Math.Max(1, scene.SampleRate / 2.0));
+        var timeRange = scene.TimeRange ?? new TimeRange(0, Math.Max(0.001, scene.Duration));
         if (plotW > 0 && plotH > 0)
         {
             if (spectrogram is not null && visibleColumns > 0)
             {
-                var bounds = spectrogram.SizeInPixels;
-                int columns = (int)Math.Min(visibleColumns, bounds.Width);
-                double nyquist = Math.Max(1, scene.SampleRate / 2.0);
-                var source = new Rect(0, (nyquist - range.Maximum) / nyquist * bounds.Height,
-                    columns, range.Span / nyquist * bounds.Height);
-                var destination = new Rect(LeftPad, TopPad, plotW * columns / bounds.Width, plotH);
-                ds.DrawImage(spectrogram, destination, source, 1, interpolation);
+                DrawPlot(ds, plot, range, timeRange, scene.SampleRate, spectrogram, visibleColumns,
+                    new TimeRange(0, Math.Max(0.001, scene.Duration)), interpolation);
             }
+            if (refinement is not null && refinementTimeRange is { } detailTime)
+                DrawPlot(ds, plot, range, timeRange, scene.SampleRate, refinement, refinementColumns, detailTime, interpolation);
 
             if (scene.SampleRate > 0) DrawGuides(ds, plot, range, scene.ReferenceLines, scene.Cutoff);
 
@@ -106,9 +108,17 @@ internal static class SpekRenderer
 
             if (scene.Duration > 0)
             {
-                float label = TextWidth(ds, "00:00", SmallFont);
-                var ticks = Ruler.Ticks(0, (int)scene.Duration, Ruler.TimeSteps, 1.5, plotW / scene.Duration, 0, label, vertical: false);
-                DrawRuler(ds, ticks, LeftPad, h - BottomPad, RulerSide.Bottom, Ruler.FormatTime);
+                bool fractional = timeRange.Span < 10
+                    || Math.Abs(timeRange.Start - Math.Round(timeRange.Start)) > 0.001
+                    || Math.Abs(timeRange.End - Math.Round(timeRange.End)) > 0.001;
+                float label = TextWidth(ds, fractional ? "00:00.00" : "00:00", SmallFont);
+                foreach (var tick in Ruler.TimeTicks(timeRange, plotW, label))
+                {
+                    float x = LeftPad + (float)tick.Position;
+                    string text = Ruler.FormatTime(tick.Seconds, fractional);
+                    ds.DrawText(text, MathF.Round(x - TextWidth(ds, text, SmallFont) / 2), h - BottomPad + Gap, Foreground, SmallFont);
+                    ds.DrawLine(x, h - BottomPad, x, h - BottomPad + TickLength, Foreground);
+                }
             }
 
             if (scene.SampleRate > 0)
@@ -133,6 +143,24 @@ internal static class SpekRenderer
             DrawRuler(ds, ticks, w - RightPad + Gap + PaletteWidth, TopPad, RulerSide.Right, Ruler.FormatDensity);
         }
         ds.Antialiasing = CanvasAntialiasing.Antialiased;
+    }
+
+    private static void DrawPlot(CanvasDrawingSession ds, Rect plot, FrequencyRange frequency, TimeRange viewTime,
+        int sampleRate, CanvasBitmap bitmap, int visibleColumns, TimeRange dataTime, CanvasImageInterpolation interpolation)
+    {
+        var bounds = bitmap.SizeInPixels;
+        double availableEnd = dataTime.TimeAt(Math.Min(visibleColumns, bounds.Width) / (double)bounds.Width);
+        double firstTime = Math.Max(viewTime.Start, dataTime.Start);
+        double endTime = Math.Min(viewTime.End, availableEnd);
+        if (endTime <= firstTime) return;
+        double nyquist = Math.Max(1, sampleRate / 2.0);
+        var source = new Rect(dataTime.FractionAt(firstTime) * bounds.Width,
+            (nyquist - frequency.Maximum) / nyquist * bounds.Height,
+            (endTime - firstTime) / dataTime.Span * bounds.Width, frequency.Span / nyquist * bounds.Height);
+        var destination = new Rect(plot.Left + viewTime.FractionAt(firstTime) * plot.Width, plot.Top,
+            (endTime - firstTime) / viewTime.Span * plot.Width, plot.Height);
+        using var clip = ds.CreateLayer(1, plot);
+        ds.DrawImage(bitmap, destination, source, 1, interpolation);
     }
 
     private static void DrawGuides(CanvasDrawingSession ds, Rect plot, FrequencyRange range, ReferenceLines mode, SpectralDrop? cutoff)

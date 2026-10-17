@@ -148,7 +148,7 @@
                 AutomationProperties.AutomationId="ResetZoom"
                 Click="ResetZoom_Click"
                 Content="Reset zoom"
-                ToolTipService.ToolTip="Reset frequency zoom (R or double-click the plot)" />
+                ToolTipService.ToolTip="Reset time and frequency zoom (R or double-click the plot)" />
         </Grid>
 
         <Grid Grid.Row="3">
@@ -178,7 +178,7 @@
             <TextBlock
                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                 Style="{ThemeResource CaptionTextBlockStyle}"
-                Text="Ctrl+wheel or +/-: frequency zoom. Drag or Shift+left/right: select time. Escape: clear selection." />
+                Text="Ctrl+wheel: zoom around the pointer. +/-: zoom around the center. Drag or Shift+left/right: select time. R: reset zoom. Escape: clear selection." />
         </StackPanel>
 
         <ContentDialog

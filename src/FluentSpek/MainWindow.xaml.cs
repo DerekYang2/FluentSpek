@@ -48,6 +48,7 @@ public sealed partial class MainWindow : Window
         SpectrumToggle.IsChecked = settings.ShowSpectrum;
         CutoffToggle.IsChecked = settings.ShowCutoffMarker;
         Spek.InspectionChanged += (_, _) => UpdateInspection();
+        Spek.RegisterPropertyChangedCallback(SpekView.RefinementStatusProperty, (_, _) => UpdateInspection());
         UpdateInspection();
 
         foreach (var property in new[]
@@ -222,7 +223,7 @@ public sealed partial class MainWindow : Window
 
     private void ResetZoom_Click(object sender, RoutedEventArgs e)
     {
-        Spek.ResetFrequencyZoom();
+        Spek.ResetZoom();
         Spek.Focus(FocusState.Programmatic);
     }
 
@@ -233,6 +234,10 @@ public sealed partial class MainWindow : Window
         Profile.FrequencyRange = Spek.VisibleFrequencyRange;
         Profile.MeasuredDrop = Spek.ShowCutoffMarker ? Spek.MeasuredDrop : null;
         var parts = new List<string>();
+        if (!string.IsNullOrEmpty(Spek.RefinementStatus)) parts.Add(Spek.RefinementStatus);
+        var time = Spek.VisibleTimeRange;
+        if (Spek.MinimumTime > 0 || Spek.MaximumTime > 0)
+            parts.Add($"Time view {time.Start:0.00} to {time.End:0.00} s.");
         var frequency = Spek.VisibleFrequencyRange;
         if (Spek.MinimumFrequency > 0 || Spek.MaximumFrequency > 0)
             parts.Add($"Frequency view {frequency.Minimum / 1000:0.00} to {frequency.Maximum / 1000:0.00} kHz.");
