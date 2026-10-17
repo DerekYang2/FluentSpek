@@ -213,6 +213,28 @@ public sealed class FfmpegIntegrationTests
         Assert.AreEqual(0, target.ColumnsDone);
     }
 
+    [TestMethod]
+    [DataRow(44100)]
+    [DataRow(48000)]
+    [DataRow(96000)]
+    public async Task LosslessCropMatchesTheSamePixelsInTheOverview(int rate)
+    {
+        var ffmpeg = RequireFfmpeg();
+        var file = Generate($"grid-{rate}.flac", "-f", "lavfi", "-i", $"anoisesrc=d=3:r={rate}:a=0.2:seed=42", "-c:a", "flac");
+        var info = await ffmpeg.ProbeAsync(file);
+        int first = rate + 700;
+        var whole = new Spectrogram(rate * 3 / 100, 1025, Palette.Spectrum, -120, 0);
+        var crop = new Spectrogram(100, 1025, Palette.Spectrum, -120, 0);
+        await SpekAnalyzer.AnalyzeAsync(ffmpeg, info, new(), whole);
+        await SpekAnalyzer.AnalyzeRangeAsync(ffmpeg, info, new(), crop,
+            new TimeRange(first / (double)rate, (first + 10000) / (double)rate));
+        Assert.AreEqual(100, crop.ColumnsDone);
+        for (int x = 0; x < crop.Columns; x++)
+            for (int bin = 0; bin < crop.Bins; bin++)
+                Assert.AreEqual(whole.GetValue(first / 100 + x, bin), crop.GetValue(x, bin), 0.0001,
+                    $"{rate} Hz, column {x}, bin {bin}");
+    }
+
     private static Ffmpeg RequireFfmpeg()
     {
         if (ffmpegPath is null) Assert.Inconclusive("ffmpeg not found. Set FLUENTSPEK_FFMPEG or add ffmpeg to PATH.");
