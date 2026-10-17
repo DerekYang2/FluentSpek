@@ -72,7 +72,9 @@ The profile, marker and references are off by default. Settings remembers them. 
 
 Samples is the FFT window size, not the song's sample rate or the image width. A smaller window gives finer timing but coarser frequency detail. A larger window gives finer frequency detail but spreads a short event across a longer time interval. At 48 kHz, 512 samples span about 11 ms, 2048 span 43 ms, and 8192 span 171 ms. The FFT bin spacing is the sample rate divided by the window size. The window function also affects how well nearby frequencies can be separated.
 
-Use smaller windows to inspect brief events and larger windows to inspect sustained tones or spectral edges. Zoom level alone does not determine the best setting. Background zoom refinement adds time positions without changing the chosen window size.
+Use smaller windows to inspect brief events and larger windows to inspect sustained tones or spectral edges. Zoom level alone does not determine the best setting. Background refinement keeps the chosen FFT size.
+
+Whole-file views and light time zoom retain the existing fast analysis. At 4x time zoom or deeper, background refinement uses a dense, file-anchored FFT grid, centred windows and time-weighted linear-power pixels. This spends the extra CPU on the zoomed passage, not initial loading. Crossing the quality threshold can change brightness and event placement slightly because the two modes use different measurements. See [the design decisions and benchmarks](docs/fixed-grid-analysis.md).
 
 ### Command line
 
@@ -87,7 +89,7 @@ With a PNG path, FluentSpek saves the spectrogram at WIDTH × HEIGHT pixels (100
 `.github/workflows/release.yml` publishes a version when its tag is pushed:
 
 1. Set `<Version>` in `Directory.Build.props`, commit, and push.
-2. Tag the commit with the same version and push the tag: `git tag v0.2.0` and `git push origin v0.2.0`.
+2. Tag the commit with the same version and push the tag: `git tag v0.3.0-preview.1` and `git push origin v0.3.0-preview.1`.
 
 The workflow runs the tests, checks that the tag matches the version, and pushes Spek.NET and Spek.NET.WinUI to nuget.org with their symbol packages. It attaches those packages to a GitHub release too. A tag with a hyphen, such as `v0.2.0-beta.1`, makes a prerelease. Running the workflow by hand from the Actions tab builds the packages without publishing.
 
@@ -97,7 +99,7 @@ nuget.org uses Trusted Publishing, so the repository stores no API key. It needs
 
 ## Differences from Spek
 
-- Every decoded frame belongs to exactly one column. Spek's worker counts some frames twice where its reader hands over a new block, so its columns run ahead of the audio. In spek-X 0.9.4, a tone that starts halfway through a 2-minute or 10-minute file appears 4 columns right of the middle of an 832-column plot.
+- Detailed zoom uses file-anchored, centred FFTs and linear-power pixel averages. Normal overviews retain the fast Spek-style scheduling and dB averaging. The original pipeline also fixes Spek's repeated frame-counting bug.
 - Values at or above the upper dB limit are red in the Spectrum palette. Spek's palette function skips the top value, so those pixels come out black. That shows when the limit is lowered with `U`, because with Hann windowing nothing reaches the default 0 dB limit.
 - The Blackman-Harris window uses the exact cosine terms. Spek reads them from a table indexed modulo the window size.
 - Changing the palette or the dB range recolours the existing analysis instead of decoding the file again.

@@ -66,9 +66,9 @@ finally { [ZoomInput]::keybd_event(17,0,2,[UIntPtr]::Zero) }
         Screenshot '03-refined-pointer.png'
     }
     Test-Ui 'Rapid keyboard zooms settle on the final view' {
-        Ui @('send-keys', 'r vk=0xBB vk=0xBB vk=0xBB', '--target', 'Spectrogram', '--via', 'send-input')
+        Ui @('send-keys', 'r vk=0xBB vk=0xBB vk=0xBB vk=0xBB', '--target', 'Spectrogram', '--via', 'send-input')
         Ui @('wait-for', 'InspectionStatus', '--value', 'Zoom refined.', '--contains', '-t', '10000')
-        if ((Text 'InspectionStatus') -notmatch 'Time view 7\.04 to 12\.96 s\b') { throw 'A stale zoom replaced the final interval.' }
+        if ((Text 'InspectionStatus') -notmatch 'Time view 8\.02 to 11\.98 s\b') { throw 'A stale zoom replaced the final interval.' }
         Screenshot '04-final-zoom.png'
     }
     Test-Ui 'Disabling the spectrum profile clears its time passage' {

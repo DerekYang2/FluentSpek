@@ -351,7 +351,7 @@ public sealed partial class SpekView : UserControl
         {
             return;
         }
-        catch (Exception e) when (e is FfmpegException or System.ComponentModel.Win32Exception or IOException or InvalidOperationException)
+        catch (Exception e) when (e is FfmpegException or System.ComponentModel.Win32Exception or IOException or InvalidOperationException or ArgumentException)
         {
             if (current != generation) return;
             runError = AudioError.DecodingFailed;
