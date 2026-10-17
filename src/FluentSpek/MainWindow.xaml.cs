@@ -216,8 +216,10 @@ public sealed partial class MainWindow : Window
     private void InspectionOption_Changed(object sender, RoutedEventArgs e)
     {
         if (Spek is null) return;
+        bool hidingSpectrum = Spek.ShowSpectrum && SpectrumToggle.IsChecked != true;
         Spek.ShowSpectrum = SpectrumToggle.IsChecked == true;
         Spek.ShowCutoffMarker = CutoffToggle.IsChecked == true;
+        if (hidingSpectrum) Spek.ClearSelection();
         UpdateInspection();
     }
 
@@ -237,14 +239,14 @@ public sealed partial class MainWindow : Window
         if (!string.IsNullOrEmpty(Spek.RefinementStatus)) parts.Add(Spek.RefinementStatus);
         var time = Spek.VisibleTimeRange;
         if (Spek.MinimumTime > 0 || Spek.MaximumTime > 0)
-            parts.Add($"Time view {time.Start:0.00} to {time.End:0.00} s.");
+            parts.Add($"Time view {time.Start:0.00} to {time.End:0.00} s");
         var frequency = Spek.VisibleFrequencyRange;
         if (Spek.MinimumFrequency > 0 || Spek.MaximumFrequency > 0)
-            parts.Add($"Frequency view {frequency.Minimum / 1000:0.00} to {frequency.Maximum / 1000:0.00} kHz.");
+            parts.Add($"Frequency view {frequency.Minimum / 1000:0.00} to {frequency.Maximum / 1000:0.00} kHz");
         if (Spek.HasSelection)
-            parts.Add($"Passage {Spek.SelectionStartSeconds:0.00} to {Spek.SelectionEndSeconds:0.00} s.");
+            parts.Add($"Passage {Spek.SelectionStartSeconds:0.00} to {Spek.SelectionEndSeconds:0.00} s");
         else if (Spek.ShowSpectrum || Spek.ShowCutoffMarker)
-            parts.Add("Whole file selected. Drag across the plot to inspect a passage.");
+            parts.Add("Using the whole track");
         if (Spek.ReferenceLines == ReferenceLines.Mp3Lame)
             parts.Add("Guides are nominal LAME stereo CBR low-pass targets, not universal MP3 boundaries.");
         if (Spek.ShowCutoffMarker)
@@ -254,7 +256,7 @@ public sealed partial class MainWindow : Window
             else parts.Add("No qualifying sustained spectral drop found.");
             parts.Add("A cutoff does not prove lossy encoding; no marker does not prove lossless origin.");
         }
-        InspectionStatus.Text = string.Join(" ", parts);
+        InspectionStatus.Text = string.Join(" / ", parts);
     }
 
     private void RestorePlacement()

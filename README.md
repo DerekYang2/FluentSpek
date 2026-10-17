@@ -62,10 +62,17 @@ Settings are saved in `%LOCALAPPDATA%\FluentSpek\settings.json`.
 - Hold Ctrl and scroll to zoom both time and frequency around the pointer. `+` and `-` zoom both axes around the center of the visible plot. The current image scales immediately. After zooming stops for 350 ms, the visible time range is analysed again in the background with more columns. The old image stays visible until its replacement is ready. The FFT size and frequency resolution stay unchanged. Press `R`, double-click the plot or use Reset zoom to restore the cached whole-file view immediately.
 - Drag horizontally to select a time passage. Shift+left/right selects with the keyboard. Escape clears the selection.
 - Turn on Spectrum profile to see the passage's average spectral level. With no selection it covers the whole file. The profile averages linear power from the spectrogram's dB values and excludes silent and unfinished columns. It is not a calibrated power spectral density.
+- Turning Spectrum profile off clears the time passage and its highlight. The cutoff measurement then uses the whole track.
 - Cutoff marker looks for a sharp, sustained drop above 8 kHz in that profile. It reports the frequency and approximate drop in dB, not a source codec or bitrate. It may mark a deliberately filtered recording, and it may miss a transcode. It is not a real/fake verdict.
 - Reference lines has None and MP3 - LAME defaults. The dotted guides are nominal LAME 3.100 stereo CBR low-pass targets: 17.0 kHz for 128 kbps, 18.6 for 192, 19.7 for 256 and 20.5 for 320. These are not MP3 requirements. The actual transition depends on sample rate; other encoders, VBR, mono and custom filters can differ.
 
 The profile, marker and references are off by default. Settings remembers them. PNG export includes the current time and frequency zoom, available refined detail, references and cutoff marker, but not the cursor or selection highlight. Saving does not wait for pending refinement. Zooming does not change the analysis passage; select a passage to change the profile or cutoff measurement. The profile and cutoff continue to use the whole-file analysis, so their results do not change when zoom detail arrives.
+
+### FFT samples
+
+Samples is the FFT window size, not the song's sample rate or the image width. A smaller window gives finer timing but coarser frequency detail. A larger window gives finer frequency detail but spreads a short event across a longer time interval. At 48 kHz, 512 samples span about 11 ms, 2048 span 43 ms, and 8192 span 171 ms. The FFT bin spacing is the sample rate divided by the window size. The window function also affects how well nearby frequencies can be separated.
+
+Use smaller windows to inspect brief events and larger windows to inspect sustained tones or spectral edges. Zoom level alone does not determine the best setting. Background zoom refinement adds time positions without changing the chosen window size.
 
 ### Command line
 

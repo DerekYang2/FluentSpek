@@ -67,7 +67,7 @@
                     <MenuFlyout x:Name="WindowMenu" Opening="Menu_Opening" />
                 </AppBarButton.Flyout>
             </AppBarButton>
-            <AppBarButton x:Name="FftButton" ToolTipService.ToolTip="FFT window size (W, Shift+W)">
+            <AppBarButton x:Name="FftButton" ToolTipService.ToolTip="FFT window size. Fewer samples: finer timing. More samples: finer frequency detail. W or Shift+W.">
                 <AppBarButton.Icon>
                     <FontIcon Glyph="&#xE8B9;" />
                 </AppBarButton.Icon>
@@ -178,7 +178,11 @@
             <TextBlock
                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                 Style="{ThemeResource CaptionTextBlockStyle}"
-                Text="Ctrl+wheel: zoom around the pointer. +/-: zoom around the center. Drag or Shift+left/right: select time. R: reset zoom. Escape: clear selection." />
+                TextWrapping="Wrap">
+                <Run FontWeight="SemiBold" Text="Ctrl+scroll: " /><Run Text="Zoom around the pointer / " />
+                <Run FontWeight="SemiBold" Text="Drag: " /><Run Text="Select a specific passage for the spectrum profile and cutoff / " />
+                <Run FontWeight="SemiBold" Text="Esc: " /><Run Text="Clear spectrum profile selection" />
+            </TextBlock>
         </StackPanel>
 
         <ContentDialog
@@ -192,16 +196,20 @@
                 <StackPanel Orientation="Horizontal" Spacing="12">
                     <NumberBox
                         x:Name="UpperBox"
+                        Width="176"
+                        AutomationProperties.AutomationId="UpperBox"
                         Header="Upper limit (dBFS)"
                         Maximum="0"
                         Minimum="-139"
-                        SpinButtonPlacementMode="Compact" />
+                        SpinButtonPlacementMode="Inline" />
                     <NumberBox
                         x:Name="LowerBox"
+                        Width="176"
+                        AutomationProperties.AutomationId="LowerBox"
                         Header="Lower limit (dBFS)"
                         Maximum="-1"
                         Minimum="-140"
-                        SpinButtonPlacementMode="Compact" />
+                        SpinButtonPlacementMode="Inline" />
                 </StackPanel>
                 <TextBox
                     x:Name="FfmpegBox"

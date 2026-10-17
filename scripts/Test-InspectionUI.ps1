@@ -123,7 +123,7 @@ try {
     }
     Test-Ui 'Keyboard selection and clear' {
         Ui @('send-keys', 'esc', '--target', 'Spectrogram', '--via', 'send-input')
-        Ui @('wait-for', 'InspectionStatus', '--value', 'Whole file', '--contains', '-t', '3000')
+        Ui @('wait-for', 'InspectionStatus', '--value', 'Using the whole track', '--contains', '-t', '3000')
         Ui @('send-keys', 'shift+right', '--target', 'Spectrogram', '--via', 'send-input')
         Ui @('wait-for', 'InspectionStatus', '--value', 'Passage', '--contains', '-t', '3000')
         Ui @('send-keys', 'esc', '--target', 'Spectrogram', '--via', 'send-input')

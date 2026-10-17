@@ -18,6 +18,7 @@ function Checked([string[]] $Arguments) {
 }
 function Ui([string[]] $Arguments) { Checked (@('ui') + $Arguments + @('--on', 'sandbox', '-a', "$AppPid")) }
 function Text([string] $Id) { (Ui @('get-value', $Id, '--json') | ConvertFrom-Json).text }
+function Nodes($items) { foreach ($item in $items) { if ($item) { $item; Nodes $item.children } } }
 function Test-Ui([string] $Name, [scriptblock] $Action) {
     try { & $Action | Out-Null; $results.Add(@{ name = $Name; status = 'PASS' }) }
     catch { $results.Add(@{ name = $Name; status = 'FAIL'; detail = "$_" }) }
@@ -32,12 +33,13 @@ try {
     $ArtifactDirectory = [IO.Path]::GetFullPath($ArtifactDirectory)
     New-Item -ItemType Directory -Path $ArtifactDirectory -Force | Out-Null
     Ui @('wait-for', 'SaveButton', '-p', 'IsEnabled', '--value', 'True', '-t', '15000') | Out-Null
+    Ui @('hover', 'Spectrogram', '--dwell-time', '200') | Out-Null
     Test-Ui 'Center zoom refines without changing the FFT' {
         $fft = Text 'FftButton'
         Ui @('send-keys', 'r vk=0xBB', '--target', 'Spectrogram', '--via', 'send-input')
         Ui @('wait-for', 'InspectionStatus', '--value', 'Zoom refined.', '--contains', '-t', '10000')
         $status = Text 'InspectionStatus'
-        if ($status -notmatch 'Time view 3.33 to 16.67 s.' -or $status -notmatch 'Frequency view 4.00 to 20.00 kHz.') { throw "Wrong center zoom: $status" }
+        if ($status -notmatch 'Time view 3\.33 to 16\.67 s\b' -or $status -notmatch 'Frequency view 4\.00 to 20\.00 kHz\b') { throw "Wrong center zoom: $status" }
         if ((Text 'FftButton') -ne $fft) { throw 'Zoom changed the FFT size.' }
         Screenshot '01-refined-center.png'
     }
@@ -66,8 +68,34 @@ finally { [ZoomInput]::keybd_event(17,0,2,[UIntPtr]::Zero) }
     Test-Ui 'Rapid keyboard zooms settle on the final view' {
         Ui @('send-keys', 'r vk=0xBB vk=0xBB vk=0xBB', '--target', 'Spectrogram', '--via', 'send-input')
         Ui @('wait-for', 'InspectionStatus', '--value', 'Zoom refined.', '--contains', '-t', '10000')
-        if ((Text 'InspectionStatus') -notmatch 'Time view 7.04 to 12.96 s.') { throw 'A stale zoom replaced the final interval.' }
+        if ((Text 'InspectionStatus') -notmatch 'Time view 7\.04 to 12\.96 s\b') { throw 'A stale zoom replaced the final interval.' }
         Screenshot '04-final-zoom.png'
+    }
+    Test-Ui 'Disabling the spectrum profile clears its time passage' {
+        Ui @('send-keys', 'r', '--target', 'Spectrogram', '--via', 'send-input')
+        if ((Text 'ShowSpectrum') -ne 'On') { Ui @('invoke', 'ShowSpectrum') }
+        Ui @('send-keys', 'right shift+right', '--target', 'Spectrogram', '--via', 'send-input')
+        Ui @('wait-for', 'InspectionStatus', '--value', 'Passage', '--contains', '-t', '3000')
+        Ui @('invoke', 'ShowSpectrum')
+        if ((Text 'InspectionStatus') -match 'Passage [0-9]') { throw 'The profile is off but a passage is still selected.' }
+        Screenshot '05-profile-off.png'
+    }
+    Test-Ui 'Settings dB spinners remain inline with the fields' {
+        Ui @('invoke', 'Settings')
+        Ui @('wait-for', 'LowerBox', '-t', '3000')
+        $tree = Ui @('inspect', '--json', '--depth', '12') | ConvertFrom-Json
+        $lower = Nodes @($tree.windows | ForEach-Object elements) | Where-Object { $_.automationId -eq 'LowerBox' -and -not $_.isOffscreen } | Select-Object -First 1
+        $children = @(Nodes @($lower.children))
+        $inputBox = $children | Where-Object automationId -eq 'InputBox' | Select-Object -First 1
+        $increase = $children | Where-Object automationId -eq 'UpSpinButton' | Select-Object -First 1
+        $decrease = $children | Where-Object automationId -eq 'DownSpinButton' | Select-Object -First 1
+        if (-not $inputBox -or -not $increase -or -not $decrease) { throw 'Missing inline dB controls.' }
+        Ui @('invoke', $increase.selector)
+        Ui @('wait-for', $inputBox.selector, '--value', '-119', '-t', '2000')
+        Screenshot '06-settings-db.png'
+        Ui @('invoke', $decrease.selector)
+        Ui @('wait-for', $inputBox.selector, '--value', '-120', '-t', '2000')
+        Ui @('invoke', 'CloseButton')
     }
 } catch { $results.Add(@{ name = 'Test setup'; status = 'FAIL'; detail = "$_" }) }
 finally {
